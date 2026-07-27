@@ -62,9 +62,10 @@ if [ ! -f "$ENV_FILE" ]; then
   SECRET_KEY=$("$BACKEND_VENV/bin/python" -c "import secrets; print(secrets.token_hex(32))")
   cat > "$ENV_FILE" <<EOF
 SECRET_KEY=$SECRET_KEY
-BOT_TOKEN=your-telegram-bot-token-here
-ALLOWED_IDS=comma,separated,telegram,ids
+BOT_TOKEN=
+ALLOWED_IDS=
 PORT=$PORT
+COOKIE_SECURE=false
 EOF
   echo ""
   echo "Created $ENV_FILE — edit it to set BOT_TOKEN and ALLOWED_IDS."
