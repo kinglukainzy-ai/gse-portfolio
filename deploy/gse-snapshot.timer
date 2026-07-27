@@ -1,0 +1,11 @@
+[Unit]
+Description=Run GH Cedi Portfolio price snapshot once a day
+
+[Timer]
+# Runs shortly after the GSE market close (GSE trades ~09:30-15:00 GMT).
+# Adjust if you'd rather snapshot at a different time.
+OnCalendar=*-*-* 16:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

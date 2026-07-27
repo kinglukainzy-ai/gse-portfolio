@@ -1,0 +1,15 @@
+[Unit]
+Description=GH Cedi Portfolio - FastAPI backend
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/opt/gse-portfolio/backend
+EnvironmentFile=/opt/gse-portfolio/.env
+ExecStart=/opt/gse-portfolio/backend/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

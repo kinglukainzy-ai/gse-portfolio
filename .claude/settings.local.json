@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:wallflake.com)",
+      "Bash(python3 -c \"from PIL import Image; print\\('pillow available'\\)\")",
+      "Bash(python3 -c \"import cairosvg; print\\('cairosvg available'\\)\")",
+      "Bash(rsvg-convert -w 512 -h 512 /home/prodigal/Downloads/gse-portfolio/backend/static/icons/icon.svg -o /home/prodigal/Downloads/gse-portfolio/backend/static/icons/icon-512.png)",
+      "Bash(rsvg-convert -w 192 -h 192 /home/prodigal/Downloads/gse-portfolio/backend/static/icons/icon.svg -o /home/prodigal/Downloads/gse-portfolio/backend/static/icons/icon-192.png)",
+      "WebFetch(domain:dev.kwayisi.org)",
+      "WebFetch(domain:gse.com.gh)",
+      "Bash(.venv/bin/python3 *)",
+      "Bash(.venv/bin/python *)",
+      "Bash(chmod +x *)"
+    ]
+  }
+}

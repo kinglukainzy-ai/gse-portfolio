@@ -1,0 +1,15 @@
+[Unit]
+Description=GH Cedi Portfolio - Telegram bot
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/opt/gse-portfolio/bot
+EnvironmentFile=/opt/gse-portfolio/.env
+ExecStart=/opt/gse-portfolio/bot/.venv/bin/python main.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

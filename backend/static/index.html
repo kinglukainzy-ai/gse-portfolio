@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>GH₵ Portfolio</title>
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+<link rel="stylesheet" href="/static/styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Logged-out gate -->
+  <div id="login-screen" class="screen">
+    <div class="login-card">
+      <h1>GH₵ Portfolio</h1>
+      <p class="subtitle">Track your IC Wealth holdings — profit, loss, and progress over time.</p>
+      <div id="telegram-login-container"></div>
+      <p class="login-note">Only allow-listed Telegram accounts can log in.</p>
+    </div>
+  </div>
+
+  <!-- Logged-in dashboard -->
+  <div id="dashboard-screen" class="screen hidden">
+    <div id="loading-overlay"><span class="loading-text">Loading…</span></div>
+    <header>
+      <h1>GH₵ Portfolio</h1>
+      <div class="header-right">
+        <span id="stale-badge" class="badge hidden">prices delayed</span>
+        <button id="logout-btn" class="btn-ghost">Log out</button>
+      </div>
+    </header>
+
+    <section class="totals-row">
+      <div class="stat-card">
+        <span class="stat-label">Cost basis</span>
+        <span id="stat-cost" class="stat-value">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Market value</span>
+        <span id="stat-value" class="stat-value">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Unrealized P&amp;L</span>
+        <span id="stat-unrealized" class="stat-value">—</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Realized P&amp;L</span>
+        <span id="stat-realized" class="stat-value">—</span>
+      </div>
+    </section>
+
+    <section class="chart-section">
+      <div class="chart-header">
+        <div class="chart-title-row">
+          <h2>Progress</h2>
+          <span id="chart-gain" class="chart-gain-badge hidden"></span>
+        </div>
+        <div class="chart-toggle">
+          <button id="view-combined" class="toggle-btn active">Combined</button>
+          <button id="view-separate" class="toggle-btn">Per-stock</button>
+        </div>
+      </div>
+      <div id="chart-container">
+        <canvas id="progress-chart" height="90"></canvas>
+      </div>
+      <p class="chart-note">Shows your portfolio value from each stock's purchase date. The dashed line is your cost basis — above it means you're in profit.</p>
+    </section>
+
+    <section class="holdings-section">
+      <div class="section-header">
+        <h2>Holdings</h2>
+        <button id="add-tx-btn" class="btn-primary">Log a trade</button>
+      </div>
+      <table id="holdings-table">
+        <thead>
+          <tr>
+            <th>Symbol</th>
+            <th>Shares</th>
+            <th>Avg cost</th>
+            <th>Current</th>
+            <th>Change</th>
+            <th>Volume</th>
+            <th>Market value</th>
+            <th>Unrealized P&amp;L</th>
+          </tr>
+        </thead>
+        <tbody id="holdings-body"></tbody>
+      </table>
+      <p id="holdings-empty" class="empty-note hidden">No holdings yet. Log your first trade to get started.</p>
+    </section>
+  </div>
+
+  <!-- Add-transaction modal -->
+  <div id="tx-modal" class="modal hidden">
+    <div class="modal-card">
+      <h2>Log a trade</h2>
+      <form id="tx-form">
+        <label>Symbol
+          <input type="text" id="tx-symbol" maxlength="12" required placeholder="e.g. MTNGH">
+        </label>
+        <label>Side
+          <select id="tx-side">
+            <option value="buy">Buy</option>
+            <option value="sell">Sell</option>
+          </select>
+        </label>
+        <label>Shares
+          <input type="number" id="tx-shares" min="0.000001" step="any" required>
+        </label>
+        <label>Price per share (GH₵)
+          <input type="number" id="tx-price" min="0" step="any" required>
+        </label>
+        <label>Date
+          <input type="date" id="tx-date">
+        </label>
+        <p id="tx-error" class="form-error hidden"></p>
+        <div class="modal-actions">
+          <button type="button" id="tx-cancel" class="btn-ghost">Cancel</button>
+          <button type="submit" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Stock detail modal -->
+  <div id="detail-modal" class="modal hidden">
+    <div class="modal-card detail-card">
+      <div class="detail-header">
+        <h2 id="detail-symbol"></h2>
+        <button type="button" id="detail-close" class="btn-ghost">Close</button>
+      </div>
+      <p id="detail-company" class="detail-subtitle"></p>
+      <div class="detail-grid">
+        <div class="detail-item"><span class="detail-label">Sector</span><span id="detail-sector" class="detail-val">—</span></div>
+        <div class="detail-item"><span class="detail-label">Industry</span><span id="detail-industry" class="detail-val">—</span></div>
+        <div class="detail-item"><span class="detail-label">Market cap</span><span id="detail-mcap" class="detail-val">—</span></div>
+        <div class="detail-item"><span class="detail-label">Shares outstanding</span><span id="detail-shares" class="detail-val">—</span></div>
+        <div class="detail-item"><span class="detail-label">EPS</span><span id="detail-eps" class="detail-val">—</span></div>
+        <div class="detail-item"><span class="detail-label">DPS</span><span id="detail-dps" class="detail-val">—</span></div>
+      </div>
+      <p id="detail-error" class="form-error hidden"></p>
+    </div>
+  </div>
+
+  <script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/static/sw.js");
+  }
+  </script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

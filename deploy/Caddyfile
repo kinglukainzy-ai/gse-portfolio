@@ -1,0 +1,16 @@
+# Replace with your real domain (e.g. a DuckDNS or your own domain pointed
+# at the Oracle VM's public IP). Caddy handles TLS automatically via
+# Let's Encrypt as long as port 80/443 reach this box.
+portfolio.example.com {
+    reverse_proxy 127.0.0.1:8000
+    encode gzip
+
+    # Basic security headers; the backend is not directly internet-reachable,
+    # only through this proxy.
+    header {
+        X-Frame-Options "SAMEORIGIN"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Content-Security-Policy "default-src 'self'; script-src 'self' https://telegram.org https://cdnjs.cloudflare.com; frame-src https://telegram.org; style-src 'self' 'unsafe-inline'; connect-src 'self' https://telegram.org; img-src 'self' data:"
+    }
+}
