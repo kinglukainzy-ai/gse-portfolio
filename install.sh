@@ -56,6 +56,9 @@ ENV_FILE="$REPO_DIR/.env"
 if [ ! -f "$ENV_FILE" ] && [ -f "$REPO_DIR/backend/.env" ]; then
   echo "Migrating backend/.env to repo root..."
   mv "$REPO_DIR/backend/.env" "$ENV_FILE"
+  # Remove placeholder values that crash startup
+  sed -i 's/^ALLOWED_IDS=comma,separated,telegram,ids/ALLOWED_IDS=/' "$ENV_FILE"
+  sed -i 's/^BOT_TOKEN=your-telegram-bot-token-here/BOT_TOKEN=/' "$ENV_FILE"
 fi
 
 if [ ! -f "$ENV_FILE" ]; then
