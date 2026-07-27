@@ -45,9 +45,35 @@ echo "Installing bot dependencies..."
 "$BOT_VENV/bin/pip" install --quiet -r "$REPO_DIR/bot/requirements.txt"
 
 # --- Port selection ---
+port_in_use() {
+  # Returns 0 (true) if something is already listening on $1
+  ss -tlnH 2>/dev/null | awk '{print $4}' | grep -qE "[:.]$1\$"
+}
+
+find_free_port() {
+  local p="$1"
+  while port_in_use "$p"; do
+    p=$((p + 1))
+  done
+  echo "$p"
+}
+
 echo ""
 read -rp "Port for the backend [default: 8000]: " PORT
 PORT="${PORT:-8000}"
+
+if port_in_use "$PORT"; then
+  SUGGESTED="$(find_free_port "$PORT")"
+  echo ""
+  echo "WARNING: port $PORT is already in use by another process (check 'sudo ss -tlnp | grep :$PORT')."
+  read -rp "Use free port $SUGGESTED instead? [Y/n] " USE_SUGGESTED
+  if [[ ! "$USE_SUGGESTED" =~ ^[Nn]$ ]]; then
+    PORT="$SUGGESTED"
+    echo "Using port $PORT."
+  else
+    echo "Keeping port $PORT — the backend will fail to bind until you free it up yourself."
+  fi
+fi
 
 # --- .env file ---
 ENV_FILE="$REPO_DIR/.env"
@@ -100,10 +126,21 @@ if [ -d /etc/systemd/system ] && [ -d "$REPO_DIR/deploy" ]; then
   read -rp "Install systemd services? [y/N] " INSTALL_SERVICES
   if [[ "$INSTALL_SERVICES" =~ ^[Yy]$ ]]; then
     CURRENT_USER="${SUDO_USER:-$(whoami)}"
+
+    # Stop any existing units first — avoids stale ExecStart paths (e.g. from a
+    # previous install run as a different user) fighting the new config, and
+    # resets any crash-restart loop before we replace the unit files.
+    for svc in gse-backend gse-bot gse-snapshot.timer; do
+      if systemctl is-enabled "$svc" &>/dev/null || systemctl is-active "$svc" &>/dev/null; then
+        sudo systemctl stop "$svc" 2>/dev/null || true
+      fi
+    done
+
     for svc in gse-backend.service gse-bot.service gse-snapshot.service gse-snapshot.timer; do
       sed "s|/opt/gse-portfolio|$REPO_DIR|g; s|User=%i|User=$CURRENT_USER|g; s|--port 8000|--port $PORT|g" \
         "$REPO_DIR/deploy/$svc" | sudo tee "/etc/systemd/system/$svc" >/dev/null
     done
+    sudo systemctl reset-failed gse-backend gse-bot 2>/dev/null || true
     sudo systemctl daemon-reload
     sudo systemctl enable gse-backend gse-bot gse-snapshot.timer
     if grep -q "your-telegram-bot-token-here" "$ENV_FILE" 2>/dev/null; then
@@ -133,6 +170,22 @@ if ! command -v caddy &>/dev/null && command -v apt-get &>/dev/null; then
 fi
 
 if command -v caddy &>/dev/null; then
+  # Warn if something else already owns 80/443 — Caddy will silently fail to
+  # start otherwise, and requests will keep hitting whatever's already there.
+  if port_in_use 80 || port_in_use 443; then
+    HOLDER=$(sudo ss -tlnp 2>/dev/null | grep -E ':80 |:443 ' | grep -oP '(?<=users:\(\(")[^"]+' | sort -u | tr '\n' ' ')
+    echo ""
+    echo "WARNING: port 80 and/or 443 is already in use (by: ${HOLDER:-unknown})."
+    echo "Caddy will fail to start until that's freed up."
+    read -rp "Stop it now so Caddy can bind? [y/N] " STOP_HOLDER
+    if [[ "$STOP_HOLDER" =~ ^[Yy]$ ]] && [ -n "$HOLDER" ]; then
+      for svc in $HOLDER; do
+        sudo systemctl stop "$svc" 2>/dev/null && sudo systemctl disable "$svc" 2>/dev/null \
+          && echo "Stopped and disabled $svc." || echo "Could not stop $svc via systemctl — stop it manually."
+      done
+    fi
+  fi
+
   echo ""
   read -rp "Domain name (e.g. gsewatch.duckdns.org, or leave blank to skip): " DOMAIN
   if [ -n "$DOMAIN" ]; then
@@ -151,7 +204,12 @@ EOF
     sudo cp /tmp/gse-Caddyfile /etc/caddy/Caddyfile
     sudo systemctl enable caddy
     sudo systemctl restart caddy
-    echo "Caddy configured for $DOMAIN — HTTPS will be automatic once DNS propagates."
+    sleep 1
+    if systemctl is-active --quiet caddy; then
+      echo "Caddy configured for $DOMAIN — HTTPS will be automatic once DNS propagates."
+    else
+      echo "WARNING: Caddy failed to start. Check: sudo systemctl status caddy --no-pager"
+    fi
   fi
 fi
 
