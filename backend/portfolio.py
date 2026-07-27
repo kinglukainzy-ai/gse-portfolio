@@ -12,6 +12,48 @@ import db
 GSE_LIVE_URL = os.environ.get("GSE_LIVE_URL", "https://dev.kwayisi.org/apis/gse/live")
 HTTP_TIMEOUT = float(os.environ.get("GSE_HTTP_TIMEOUT", "8"))
 
+GSE_COMPANIES = {
+    "AADS": "AADS",
+    "ACCESS": "Access Bank Ghana",
+    "ADB": "Agricultural Development Bank",
+    "AGA": "AngloGold Ashanti",
+    "ALLGH": "Atlantic Lithium",
+    "ASG": "Asante Gold",
+    "BOPP": "Benso Oil Palm Plantation",
+    "CAL": "CalBank",
+    "CLYD": "Clydestone Ghana",
+    "CMLT": "Camelot Ghana",
+    "CPC": "Cocoa Processing Company",
+    "DASPHARMA": "Dannex Ayrton Starwin",
+    "DIGICUT": "Digicut Production",
+    "EGH": "Ecobank Ghana",
+    "EGL": "Enterprise Group",
+    "ETI": "Ecobank Transnational",
+    "FAB": "First Atlantic Bank",
+    "FML": "Fan Milk",
+    "GCB": "GCB Bank",
+    "GGBL": "Guinness Ghana Breweries",
+    "GLD": "NewGold ETF",
+    "GOIL": "Ghana Oil Company",
+    "HORDS": "Hords",
+    "IIL": "Intravenous Infusions",
+    "KASA": "Kasapreko",
+    "MAC": "Mega African Capital",
+    "MMH": "Mechanical Lloyd",
+    "MTNGH": "MTN Ghana",
+    "RBGH": "Republic Bank Ghana",
+    "SAMBA": "Samba Foods",
+    "SCB": "Standard Chartered Bank",
+    "SCBPREF": "Standard Chartered (Pref)",
+    "SIC": "SIC Insurance",
+    "SOGEGH": "Societe Generale Ghana",
+    "TBL": "Trust Bank Gambia",
+    "TLW": "Tullow Oil",
+    "TOTAL": "TotalEnergies Ghana",
+    "UNIL": "Unilever Ghana",
+    "ZEN": "ZEN Petroleum",
+}
+
 
 class PriceFetchError(Exception):
     pass

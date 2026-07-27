@@ -10,7 +10,22 @@
       "WebFetch(domain:gse.com.gh)",
       "Bash(.venv/bin/python3 *)",
       "Bash(.venv/bin/python *)",
-      "Bash(chmod +x *)"
+      "Bash(chmod +x *)",
+      "Bash(curl -sL \"https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js\" -o /home/prodigal/Downloads/gse-portfolio/backend/static/chart.umd.min.js)",
+      "Read(//opt/workspace/**)",
+      "Read(//opt/**)",
+      "Bash(curl -s \"https://dev.kwayisi.org/apis/gse/live\")",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c \"import json,sys; data=json.load\\(sys.stdin\\); [print\\(r['name']\\) for r in data]\")",
+      "Bash(curl -s \"https://dev.kwayisi.org/apis/gse/equities\")",
+      "Bash(python3 -c ' *)",
+      "Bash(curl -s \"https://dev.kwayisi.org/apis/gse/equities/MTNGH\")",
+      "Bash(python3 -c \"import secrets; print\\(secrets.token_hex\\(32\\)\\)\")",
+      "Bash(SECRET_KEY=$\\(python3 -c \"import secrets; print\\(secrets.token_hex\\(32\\)\\)\"\\) ALLOWED_IDS=\"\" COOKIE_SECURE=false .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000)",
+      "Bash(curl -s http://localhost:8000/)",
+      "Bash(curl -s http://localhost:8000/api/stocks)",
+      "Bash(curl -sI http://localhost:8000/static/chart.umd.min.js)",
+      "Bash(kill %1)"
     ]
   }
 }

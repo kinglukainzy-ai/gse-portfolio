@@ -10,7 +10,7 @@
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 <link rel="stylesheet" href="/static/styles.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="/static/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -85,6 +85,7 @@
       </div>
       <div id="chart-container">
         <canvas id="progress-chart" height="90"></canvas>
+        <p id="chart-empty" class="empty-note hidden">Log a trade to start tracking your progress.</p>
       </div>
       <p class="chart-note">Shows your portfolio value from each stock's purchase date. The dashed line is your cost basis — above it means you're in profit.</p>
     </section>
@@ -119,7 +120,10 @@
       <h2>Log a trade</h2>
       <form id="tx-form">
         <label>Symbol
-          <input type="text" id="tx-symbol" maxlength="12" required placeholder="e.g. MTNGH">
+          <div class="stock-picker-wrap">
+            <input type="text" id="tx-symbol" maxlength="12" required placeholder="Search stocks…" autocomplete="off">
+            <ul id="tx-symbol-dropdown" class="stock-dropdown hidden"></ul>
+          </div>
         </label>
         <label>Side
           <select id="tx-side">

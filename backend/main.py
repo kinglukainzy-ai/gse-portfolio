@@ -59,6 +59,25 @@ def get_config():
     return {"bot_username": BOT_USERNAME}
 
 
+# ---------- stock list ----------
+
+@app.get("/api/stocks")
+async def stock_list():
+    """Return all listed GSE symbols with company names and live prices."""
+    try:
+        prices = await portfolio.fetch_live_prices()
+    except portfolio.PriceFetchError:
+        prices = {}
+    stocks = []
+    for sym, entry in sorted(prices.items()):
+        stocks.append({
+            "symbol": sym,
+            "name": portfolio.GSE_COMPANIES.get(sym, ""),
+            "price": entry["price"],
+        })
+    return {"stocks": stocks}
+
+
 # ---------- auth ----------
 
 @app.post("/api/auth/telegram")

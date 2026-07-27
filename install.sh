@@ -197,7 +197,7 @@ $DOMAIN {
         X-Frame-Options "SAMEORIGIN"
         X-Content-Type-Options "nosniff"
         Referrer-Policy "strict-origin-when-cross-origin"
-        Content-Security-Policy "default-src 'self'; script-src 'self' https://telegram.org https://cdnjs.cloudflare.com; frame-src https://telegram.org; style-src 'self' 'unsafe-inline'; connect-src 'self' https://telegram.org; img-src 'self' data:"
+        Content-Security-Policy "default-src 'self'; script-src 'self' https://telegram.org; frame-src https://telegram.org; style-src 'self' 'unsafe-inline'; connect-src 'self' https://telegram.org; img-src 'self' data:"
     }
 }
 EOF

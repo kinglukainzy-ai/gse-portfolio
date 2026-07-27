@@ -205,6 +205,53 @@ tr:last-child td { border-bottom: none; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .form-error { color: var(--red); font-size: 0.82rem; }
 
+/* stock picker dropdown */
+.stock-picker-wrap { position: relative; }
+.stock-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-top: 4px;
+  z-index: 20;
+  list-style: none;
+  padding: 4px 0;
+}
+.stock-dropdown li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+.stock-dropdown li:hover,
+.stock-dropdown li.active {
+  background: rgba(74, 222, 128, 0.1);
+}
+.stock-dropdown li .stock-sym {
+  font-weight: 600;
+  color: var(--accent);
+  min-width: 70px;
+}
+.stock-dropdown li .stock-name {
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stock-dropdown li .stock-price {
+  margin-left: auto;
+  color: var(--text);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
 /* stock detail modal */
 .detail-card { width: 360px; }
 .detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }

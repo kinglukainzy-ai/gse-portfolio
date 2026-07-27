@@ -9,6 +9,7 @@ const $ = (id) => document.getElementById(id);
 let chart = null;
 let chartMode = "combined"; // "combined" | "separate"
 let cachedHoldings = null;
+let cachedStocks = null;
 
 // ---------- bootstrap ----------
 
@@ -17,6 +18,7 @@ async function init() {
   mountTelegramWidget(config.bot_username);
   setupAuthTabs();
   setupWebAuthForm();
+  setupStockPicker();
 
   const me = await api("/api/me", { auth: false, silent404: true });
   if (me) {
@@ -70,6 +72,93 @@ function setupWebAuthForm() {
     } catch (e) {
       errEl.textContent = e.message;
       errEl.classList.remove("hidden");
+    }
+  });
+}
+
+function setupStockPicker() {
+  const input = $("tx-symbol");
+  const dropdown = $("tx-symbol-dropdown");
+  let activeIdx = -1;
+
+  function renderDropdown(stocks) {
+    dropdown.innerHTML = "";
+    activeIdx = -1;
+    if (!stocks.length) {
+      dropdown.classList.add("hidden");
+      return;
+    }
+    for (const s of stocks) {
+      const li = document.createElement("li");
+      const sym = document.createElement("span");
+      sym.className = "stock-sym";
+      sym.textContent = s.symbol;
+      const name = document.createElement("span");
+      name.className = "stock-name";
+      name.textContent = s.name;
+      const price = document.createElement("span");
+      price.className = "stock-price";
+      price.textContent = s.price != null ? `GH₵${s.price.toFixed(2)}` : "";
+      li.appendChild(sym);
+      li.appendChild(name);
+      li.appendChild(price);
+      li.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        pickStock(s);
+      });
+      dropdown.appendChild(li);
+    }
+    dropdown.classList.remove("hidden");
+  }
+
+  function pickStock(s) {
+    input.value = s.symbol;
+    dropdown.classList.add("hidden");
+    if (s.price != null) {
+      const priceInput = $("tx-price");
+      if (!priceInput.value) priceInput.value = s.price.toFixed(2);
+    }
+    $("tx-shares").focus();
+  }
+
+  function filterStocks(query) {
+    if (!cachedStocks) return [];
+    const q = query.trim().toUpperCase();
+    if (!q) return cachedStocks;
+    return cachedStocks.filter(
+      (s) => s.symbol.includes(q) || s.name.toUpperCase().includes(q)
+    );
+  }
+
+  input.addEventListener("focus", () => {
+    if (cachedStocks) renderDropdown(filterStocks(input.value));
+  });
+
+  input.addEventListener("input", () => {
+    renderDropdown(filterStocks(input.value));
+  });
+
+  input.addEventListener("blur", () => {
+    setTimeout(() => dropdown.classList.add("hidden"), 150);
+  });
+
+  input.addEventListener("keydown", (e) => {
+    const items = dropdown.querySelectorAll("li");
+    if (!items.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIdx = Math.min(activeIdx + 1, items.length - 1);
+      items.forEach((li, i) => li.classList.toggle("active", i === activeIdx));
+      items[activeIdx].scrollIntoView({ block: "nearest" });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIdx = Math.max(activeIdx - 1, 0);
+      items.forEach((li, i) => li.classList.toggle("active", i === activeIdx));
+      items[activeIdx].scrollIntoView({ block: "nearest" });
+    } else if (e.key === "Enter" && activeIdx >= 0) {
+      e.preventDefault();
+      const filtered = filterStocks(input.value);
+      if (filtered[activeIdx]) pickStock(filtered[activeIdx]);
     }
   });
 }
@@ -150,10 +239,20 @@ async function loadEverything() {
   overlay.classList.remove("hidden");
   textEl.textContent = "Loading…";
   try {
-    await Promise.all([loadHoldings(), loadChart()]);
+    await Promise.all([loadHoldings(), loadChart(), loadStocks()]);
     overlay.classList.add("hidden");
   } catch (e) {
     textEl.textContent = "Couldn't load data — check your connection and try refreshing.";
+  }
+}
+
+async function loadStocks() {
+  if (cachedStocks) return;
+  try {
+    const data = await api("/api/stocks");
+    cachedStocks = data.stocks || [];
+  } catch (_) {
+    cachedStocks = [];
   }
 }
 
@@ -294,6 +393,14 @@ function destroyChart() {
 
 function renderCombinedChart(data) {
   destroyChart();
+  if (!data.series || data.series.length === 0) {
+    chartGainBadge(null);
+    $("progress-chart").style.display = "none";
+    $("chart-empty").classList.remove("hidden");
+    return;
+  }
+  $("progress-chart").style.display = "";
+  $("chart-empty").classList.add("hidden");
   chartGainBadge(data.series);
   const ctx = $("progress-chart").getContext("2d");
   const labels = data.series.map((p) => p.date);
@@ -333,7 +440,14 @@ function renderCombinedChart(data) {
 
 function renderSeparateChart(perSymbol) {
   destroyChart();
-  const allSeries = Object.values(perSymbol).flat();
+  if (!Object.keys(perSymbol).length) {
+    chartGainBadge(null);
+    $("progress-chart").style.display = "none";
+    $("chart-empty").classList.remove("hidden");
+    return;
+  }
+  $("progress-chart").style.display = "";
+  $("chart-empty").classList.add("hidden");
   chartGainBadge(null);
   const ctx = $("progress-chart").getContext("2d");
   const palette = ["#4ade80", "#60a5fa", "#f472b6", "#facc15", "#a78bfa", "#fb923c", "#2dd4bf"];
@@ -454,6 +568,7 @@ $("add-tx-btn").addEventListener("click", () => {
   $("tx-form").reset();
   $("tx-date").valueAsDate = new Date();
   $("tx-modal").classList.remove("hidden");
+  $("tx-symbol").focus();
 });
 
 $("tx-cancel").addEventListener("click", () => $("tx-modal").classList.add("hidden"));

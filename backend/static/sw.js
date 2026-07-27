@@ -1,4 +1,4 @@
-const CACHE_NAME = "ghc-portfolio-v6";
+const CACHE_NAME = "ghc-portfolio-v8";
 const PRECACHE = [
   "/",
   "/static/styles.css",
