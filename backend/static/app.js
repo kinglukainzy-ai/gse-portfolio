@@ -15,6 +15,8 @@ let cachedHoldings = null;
 async function init() {
   const config = await api("/api/config", { auth: false }).catch(() => ({ bot_username: "" }));
   mountTelegramWidget(config.bot_username);
+  setupAuthTabs();
+  setupWebAuthForm();
 
   const me = await api("/api/me", { auth: false, silent404: true });
   if (me) {
@@ -23,6 +25,53 @@ async function init() {
   } else {
     showLogin();
   }
+}
+
+function setupAuthTabs() {
+  const tabLogin = $("tab-login");
+  const tabRegister = $("tab-register");
+  const submitBtn = $("auth-submit");
+
+  tabLogin.addEventListener("click", () => {
+    tabLogin.classList.add("active");
+    tabRegister.classList.remove("active");
+    submitBtn.textContent = "Log in";
+    submitBtn.dataset.mode = "login";
+    $("auth-error").classList.add("hidden");
+  });
+
+  tabRegister.addEventListener("click", () => {
+    tabRegister.classList.add("active");
+    tabLogin.classList.remove("active");
+    submitBtn.textContent = "Create account";
+    submitBtn.dataset.mode = "register";
+    $("auth-error").classList.add("hidden");
+  });
+
+  submitBtn.dataset.mode = "login";
+}
+
+function setupWebAuthForm() {
+  $("web-auth-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = $("auth-error");
+    errEl.classList.add("hidden");
+
+    const username = $("auth-username").value.trim();
+    const password = $("auth-password").value;
+    const mode = $("auth-submit").dataset.mode;
+
+    if (!username || !password) return;
+
+    try {
+      await api(`/api/auth/${mode}`, { method: "POST", body: { username, password }, auth: false });
+      showDashboard();
+      await loadEverything();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.classList.remove("hidden");
+    }
+  });
 }
 
 function mountTelegramWidget(botUsername) {

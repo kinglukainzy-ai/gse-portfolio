@@ -86,10 +86,53 @@ def logout(response: Response):
     return {"ok": True}
 
 
+class RegisterIn(BaseModel):
+    username: str = Field(..., min_length=3, max_length=20)
+    password: str = Field(..., min_length=4)
+
+
+@app.post("/api/auth/register")
+def register(payload: RegisterIn, response: Response):
+    username = payload.username.strip()
+    if not username.isalnum():
+        raise HTTPException(status_code=400, detail="Username must be letters and numbers only")
+    if db.get_user_by_username(username):
+        raise HTTPException(status_code=409, detail="Username already taken")
+
+    password_hash = auth.hash_password(payload.password)
+    user_id = db.create_web_user(username, password_hash)
+
+    token = auth.create_session_token(user_id)
+    response.set_cookie(
+        COOKIE_NAME, token,
+        httponly=True, samesite="lax", secure=COOKIE_SECURE,
+        max_age=auth.SESSION_MAX_AGE,
+    )
+    return {"ok": True, "user_id": user_id, "username": username}
+
+
+@app.post("/api/auth/login")
+def web_login(payload: RegisterIn, response: Response):
+    user = db.get_user_by_username(payload.username.strip())
+    if not user or not user.get("password_hash"):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    if not auth.verify_password(payload.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    user_id = user["telegram_id"]
+    token = auth.create_session_token(user_id)
+    response.set_cookie(
+        COOKIE_NAME, token,
+        httponly=True, samesite="lax", secure=COOKIE_SECURE,
+        max_age=auth.SESSION_MAX_AGE,
+    )
+    return {"ok": True, "user_id": user_id, "username": user.get("web_username")}
+
+
 @app.get("/api/me")
 def me(telegram_id: int = Depends(require_user)):
     user = db.get_user(telegram_id)
-    return {"telegram_id": telegram_id, "username": user.get("username") if user else None}
+    return {"telegram_id": telegram_id, "username": user.get("web_username") or user.get("username") if user else None}
 
 
 # ---------- transactions ----------

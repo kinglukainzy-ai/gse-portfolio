@@ -21,6 +21,16 @@ body {
 
 .hidden { display: none !important; }
 
+/* auth tabs */
+.auth-tabs { display: flex; gap: 4px; background: var(--bg); border-radius: 8px; padding: 4px; margin-bottom: 16px; }
+.auth-tab { flex: 1; background: transparent; border: none; color: var(--text-dim); padding: 8px; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+.auth-tab.active { background: var(--accent); color: #0f1115; font-weight: 600; }
+.auth-btn { width: 100%; margin-top: 4px; }
+.auth-divider { display: flex; align-items: center; gap: 8px; margin: 16px 0; color: var(--text-dim); font-size: 0.8rem; }
+.auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+#web-auth-form label { display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 12px; }
+#web-auth-form input { width: 100%; margin-top: 4px; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; color: var(--text); font-size: 0.9rem; }
+
 /* login */
 .screen.login-screen,
 #login-screen {

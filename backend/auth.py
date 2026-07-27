@@ -1,10 +1,11 @@
 """
-Auth: Telegram Login Widget verification + a signed session cookie.
+Auth: Telegram Login Widget verification + simple username/password +
+a signed session cookie.
 
-Design intent (per project spec): the only reason a login exists at all is
-so two people sharing one server don't have their portfolios merge. The
-allow-list of telegram IDs is the real access-control boundary; the signed
-hash from Telegram just proves "this really is that telegram account."
+Design intent: the app is for 2-4 users. Telegram login is optional.
+Users can also register/login with a simple username + password on the
+website directly. The allow-list still gates Telegram logins, but web
+accounts are open to anyone who can reach the site.
 """
 import hashlib
 import hmac
@@ -83,7 +84,7 @@ def create_session_token(telegram_id: int) -> str:
 
 
 def verify_session_token(token: str) -> int | None:
-    """Returns telegram_id if the token is valid, unexpired, and still allow-listed."""
+    """Returns user_id if the token is valid and unexpired. Telegram users must still be allow-listed."""
     try:
         payload_b64, sig = token.split(".", 1)
     except ValueError:
@@ -103,8 +104,27 @@ def verify_session_token(token: str) -> int | None:
 
     if time.time() - issued_at > SESSION_MAX_AGE:
         return None
-    if not is_allowed(telegram_id):
-        # Covers the case where ALLOWED_IDS was edited after the cookie was issued.
+    # Web users have negative IDs — they bypass the Telegram allow-list
+    if telegram_id > 0 and not is_allowed(telegram_id):
         return None
 
     return telegram_id
+
+
+# ---------- password auth ----------
+
+def hash_password(password: str) -> str:
+    salt = os.urandom(16)
+    h = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
+    return salt.hex() + ":" + h.hex()
+
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    try:
+        salt_hex, hash_hex = stored_hash.split(":", 1)
+        salt = bytes.fromhex(salt_hex)
+        expected = bytes.fromhex(hash_hex)
+    except (ValueError, AttributeError):
+        return False
+    h = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, 100_000)
+    return hmac.compare_digest(h, expected)

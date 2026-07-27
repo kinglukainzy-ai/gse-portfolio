@@ -18,9 +18,27 @@
   <div id="login-screen" class="screen">
     <div class="login-card">
       <h1>GH₵ Portfolio</h1>
-      <p class="subtitle">Track your IC Wealth holdings — profit, loss, and progress over time.</p>
+      <p class="subtitle">Track your holdings — profit, loss, and progress over time.</p>
+
+      <!-- Web login/register form -->
+      <div id="auth-tabs" class="auth-tabs">
+        <button class="auth-tab active" id="tab-login">Log in</button>
+        <button class="auth-tab" id="tab-register">Create account</button>
+      </div>
+      <form id="web-auth-form">
+        <label>Username
+          <input type="text" id="auth-username" minlength="3" maxlength="20" required placeholder="e.g. kwame">
+        </label>
+        <label>Password
+          <input type="password" id="auth-password" minlength="4" required>
+        </label>
+        <p id="auth-error" class="form-error hidden"></p>
+        <button type="submit" id="auth-submit" class="btn-primary auth-btn">Log in</button>
+      </form>
+
+      <div class="auth-divider"><span>or</span></div>
       <div id="telegram-login-container"></div>
-      <p class="login-note">Only allow-listed Telegram accounts can log in.</p>
+      <p class="login-note">Telegram login requires an allow-listed account.</p>
     </div>
   </div>
 

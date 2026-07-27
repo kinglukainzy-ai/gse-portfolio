@@ -63,6 +63,16 @@ def init_db():
             """
         )
         _migrate_snapshots(conn)
+        _migrate_users(conn)
+
+
+def _migrate_users(conn):
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(users)").fetchall()}
+    if "web_username" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN web_username TEXT")
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_web_username ON users(web_username)")
+    if "password_hash" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN password_hash TEXT")
 
 
 def _migrate_snapshots(conn):
@@ -103,6 +113,29 @@ def get_user(telegram_id: int):
             "SELECT * FROM users WHERE telegram_id = ?", (telegram_id,)
         ).fetchone()
         return dict(row) if row else None
+
+
+def get_user_by_username(username: str):
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT * FROM users WHERE web_username = ?", (username.lower(),)
+        ).fetchone()
+        return dict(row) if row else None
+
+
+def create_web_user(username: str, password_hash: str) -> int:
+    with get_db() as conn:
+        row = conn.execute("SELECT MIN(telegram_id) FROM users").fetchone()
+        min_id = row[0] if row[0] is not None else 0
+        new_id = min(min_id - 1, -1)
+        conn.execute(
+            """
+            INSERT INTO users (telegram_id, username, first_name, web_username, password_hash, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (new_id, username, username, username.lower(), password_hash, now_iso()),
+        )
+        return new_id
 
 
 # ---------- transactions ----------
