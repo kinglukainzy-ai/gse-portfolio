@@ -90,6 +90,8 @@ function setupStockPicker() {
     }
     for (const s of stocks) {
       const li = document.createElement("li");
+      const logo = stockLogo(s.symbol, 28, "stock-logo", "stock-letter");
+      li.appendChild(logo);
       const sym = document.createElement("span");
       sym.className = "stock-sym";
       sym.textContent = s.symbol;
@@ -251,6 +253,9 @@ async function loadStocks() {
   try {
     const data = await api("/api/stocks");
     cachedStocks = data.stocks || [];
+    for (const s of cachedStocks) {
+      if (s.logo) LOGO_EXTS[s.symbol] = s.logo;
+    }
   } catch (_) {
     cachedStocks = [];
   }
@@ -308,9 +313,13 @@ function renderHoldingsTable(holdings) {
     const tr = document.createElement("tr");
 
     const symTd = document.createElement("td");
-    symTd.textContent = h.symbol;
-    symTd.className = "clickable-symbol";
-    symTd.addEventListener("click", () => showStockDetail(h.symbol));
+    const logo = stockLogo(h.symbol, 22, "holding-logo", "holding-letter");
+    symTd.appendChild(logo);
+    const symText = document.createElement("span");
+    symText.textContent = h.symbol;
+    symText.className = "clickable-symbol";
+    symText.addEventListener("click", () => showStockDetail(h.symbol));
+    symTd.appendChild(symText);
     tr.appendChild(symTd);
 
     const cells = [
@@ -345,6 +354,36 @@ function renderHoldingsTable(holdings) {
 
     body.appendChild(tr);
   }
+}
+
+// ---------- stock logo helper ----------
+
+const LOGO_EXTS = {};  // populated from /api/stocks response
+
+function stockLogo(symbol, size, imgClass, fallbackClass) {
+  const ext = LOGO_EXTS[symbol];
+  if (ext) {
+    const img = document.createElement("img");
+    img.src = `/static/logos/${symbol}.${ext}`;
+    img.alt = symbol;
+    img.width = size;
+    img.height = size;
+    img.className = imgClass;
+    img.onerror = function () {
+      this.replaceWith(letterAvatar(symbol, size, fallbackClass));
+    };
+    return img;
+  }
+  return letterAvatar(symbol, size, fallbackClass);
+}
+
+function letterAvatar(symbol, size, className) {
+  const span = document.createElement("span");
+  span.className = className;
+  span.textContent = symbol.charAt(0);
+  span.style.width = size + "px";
+  span.style.height = size + "px";
+  return span;
 }
 
 // ---------- chart ----------

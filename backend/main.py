@@ -63,18 +63,31 @@ def get_config():
 
 @app.get("/api/stocks")
 async def stock_list():
-    """Return all listed GSE symbols with company names and live prices."""
+    """Return all listed GSE symbols with company names, live prices, and logo info."""
     try:
         prices = await portfolio.fetch_live_prices()
     except portfolio.PriceFetchError:
         prices = {}
+
+    # Check which logos exist on disk
+    logos_dir = os.path.join(STATIC_DIR, "logos")
+    logo_files = {}
+    if os.path.isdir(logos_dir):
+        for f in os.listdir(logos_dir):
+            name, ext = os.path.splitext(f)
+            if ext and name.upper() != "MANIFEST":
+                logo_files[name.upper()] = ext.lstrip(".")
+
     stocks = []
     for sym, entry in sorted(prices.items()):
-        stocks.append({
+        stock = {
             "symbol": sym,
             "name": portfolio.GSE_COMPANIES.get(sym, ""),
             "price": entry["price"],
-        })
+        }
+        if sym in logo_files:
+            stock["logo"] = logo_files[sym]
+        stocks.append(stock)
     return {"stocks": stocks}
 
 

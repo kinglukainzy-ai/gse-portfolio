@@ -25,7 +25,22 @@
       "Bash(curl -s http://localhost:8000/)",
       "Bash(curl -s http://localhost:8000/api/stocks)",
       "Bash(curl -sI http://localhost:8000/static/chart.umd.min.js)",
-      "Bash(kill %1)"
+      "Bash(kill %1)",
+      "Read(//home/prodigal/Downloads/**)",
+      "Read(//home/**)",
+      "Bash(find / -name \"gse_logo_scraper*\" -type f)",
+      "Bash(pip3 list *)",
+      "Bash(python3 -c \"from playwright.sync_api import sync_playwright; print\\('ok'\\)\")",
+      "Bash(curl *)",
+      "Bash(python3 *)",
+      "Bash(pkill -f \"uvicorn main:app\")",
+      "Bash(pkill -f \"uvicorn\")",
+      "Bash(SECRET_KEY=$\\(python3 -c \"import secrets; print\\(secrets.token_hex\\(32\\)\\)\"\\) ALLOWED_IDS=\"\" COOKIE_SECURE=false .venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8001)",
+      "Bash(pkill -9 -f uvicorn)",
+      "Bash(SECRET_KEY=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ALLOWED_IDS=\"\" COOKIE_SECURE=false .venv/bin/python *)",
+      "Bash(SECRET_KEY=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ALLOWED_IDS='' COOKIE_SECURE=false .venv/bin/python -c ' *)",
+      "Bash(pkill -f uvicorn)",
+      "Bash(rm -f /tmp/test_logos.db)"
     ]
   }
 }
