@@ -2,7 +2,7 @@ import os
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response, HTTPException, Depends
+from fastapi import FastAPI, Request, Response, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -250,6 +250,21 @@ async def history(symbol: str | None = None, telegram_id: int = Depends(require_
         if not symbol.isalnum():
             raise HTTPException(status_code=400, detail="symbol must be alphanumeric")
     return await portfolio.get_history(telegram_id, symbol)
+
+
+@app.post("/api/admin/refresh-prices")
+async def admin_refresh_prices(request: Request):
+    """Manually trigger the price poller. Requires admin auth."""
+    ok = request.headers.get("X-Admin-Key") == os.environ.get("ADMIN_KEY", "")
+    if not ok:
+        raise HTTPException(status_code=403, detail="forbidden")
+
+    try:
+        prices = await portfolio.fetch_live_prices()
+        db.save_current_prices_bulk(prices)
+        return {"status": "ok", "saved": len(prices)}
+    except portfolio.PriceFetchError as e:
+        raise HTTPException(status_code=502, detail=str(e))
 
 
 @app.exception_handler(HTTPException)

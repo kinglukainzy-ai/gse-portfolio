@@ -10,7 +10,8 @@ import httpx
 import db
 
 GSE_LIVE_URL = os.environ.get("GSE_LIVE_URL", "https://dev.kwayisi.org/apis/gse/live")
-HTTP_TIMEOUT = float(os.environ.get("GSE_HTTP_TIMEOUT", "8"))
+HTTP_TIMEOUT = float(os.environ.get("GSE_HTTP_TIMEOUT", "15"))
+GSE_PROXY_URL = os.environ.get("GSE_PROXY_URL")
 
 GSE_COMPANIES = {
     "AADS": "AADS",
@@ -64,7 +65,7 @@ async def fetch_live_prices() -> dict[str, dict]:
     Hits the public GSE live-price API.
     Returns {SYMBOL: {"price": float, "change": float, "volume": int}}.
     """
-    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, proxy=GSE_PROXY_URL) as client:
         try:
             resp = await client.get(GSE_LIVE_URL)
             resp.raise_for_status()
@@ -102,7 +103,7 @@ GSE_EQUITIES_URL = os.environ.get(
 async def fetch_stock_detail(symbol: str) -> dict | None:
     """Fetch fundamentals for a single symbol from /equities/{symbol}."""
     symbol = symbol.upper()
-    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
+    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT, proxy=GSE_PROXY_URL) as client:
         try:
             resp = await client.get(f"{GSE_EQUITIES_URL}/{symbol}")
             if resp.status_code == 404:

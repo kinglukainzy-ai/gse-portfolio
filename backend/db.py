@@ -307,6 +307,30 @@ def save_current_price(symbol: str, price: float, change: float = 0.0, volume: i
         )
 
 
+def save_current_prices_bulk(prices: dict[str, dict]):
+    """Upsert many prices in one transaction."""
+    if not prices:
+        return
+    with get_db() as conn:
+        _migrate_current_prices(conn)
+        rows = [
+            (sym.upper(), info["price"], info.get("change", 0), info.get("volume", 0), now_iso())
+            for sym, info in prices.items()
+        ]
+        conn.executemany(
+            """
+            INSERT INTO current_prices (symbol, price, change, volume, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(symbol) DO UPDATE SET
+                price = excluded.price,
+                change = excluded.change,
+                volume = excluded.volume,
+                updated_at = excluded.updated_at
+            """,
+            rows,
+        )
+
+
 def get_current_prices() -> dict[str, dict]:
     with get_db() as conn:
         _migrate_current_prices(conn)
