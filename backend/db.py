@@ -114,6 +114,18 @@ def _migrate_snapshots(conn):
         conn.execute("ALTER TABLE price_snapshots ADD COLUMN volume INTEGER DEFAULT 0")
 
 
+def _migrate_current_prices(conn):
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS current_prices (
+            symbol        TEXT PRIMARY KEY,
+            price         REAL NOT NULL,
+            change        REAL NOT NULL DEFAULT 0,
+            volume        INTEGER NOT NULL DEFAULT 0,
+            updated_at    TEXT NOT NULL
+        )
+    """)
+
+
 def now_iso():
     return datetime.now(timezone.utc).isoformat()
 
@@ -280,6 +292,7 @@ def latest_snapshot_price(symbol: str) -> float | None:
 
 def save_current_price(symbol: str, price: float, change: float = 0.0, volume: int = 0):
     with get_db() as conn:
+        _migrate_current_prices(conn)
         conn.execute(
             """
             INSERT INTO current_prices (symbol, price, change, volume, updated_at)
@@ -296,6 +309,7 @@ def save_current_price(symbol: str, price: float, change: float = 0.0, volume: i
 
 def get_current_prices() -> dict[str, dict]:
     with get_db() as conn:
+        _migrate_current_prices(conn)
         rows = conn.execute("SELECT symbol, price, change, volume FROM current_prices").fetchall()
         result = {}
         for row in rows:

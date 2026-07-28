@@ -221,7 +221,14 @@ tr:last-child td { border-bottom: none; }
   color: var(--text);
   font-size: 0.9rem;
 }
-.market-table th { cursor: pointer; user-select: none; white-space: nowrap; }
+.market-card .table-wrap { overflow-y: auto; flex: 1; margin-top: 8px; }
+.market-table { width: 100%; border-collapse: collapse; }
+.market-table th, .market-table td { text-align: left; padding: 8px; font-size: 0.85rem; }
+.market-table th { color: var(--text-dim); font-weight: 500; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.market-table td { border-bottom: 1px solid var(--border); }
+.market-table tr:last-child td { border-bottom: none; }
+.market-table .sym-cell { display: flex; align-items: center; gap: 8px; }
+.market-table th { cursor: pointer; user-select: none; }
 .market-table th:hover { color: var(--text); }
 .market-table th::after { content: " ⇅"; color: var(--text-dim); font-size: 0.7rem; }
 .market-table th.sort-asc::after { content: " ↑"; color: var(--accent); }

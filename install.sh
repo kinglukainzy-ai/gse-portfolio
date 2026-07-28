@@ -120,6 +120,23 @@ cd "$REPO_DIR/backend"
 echo "Running tests..."
 "$BACKEND_VENV/bin/python" -m pytest tests/ -q || echo "Some tests failed — check above."
 
+# --- Warm price cache ---
+echo ""
+echo "Seeding live price cache..."
+cd "$REPO_DIR/backend"
+"$BACKEND_VENV/bin/python" price_poller.py || echo "Price poller skipped (API unreachable)."
+
+# --- Import historical data if available ---
+HISTORY_CSV="$REPO_DIR/Daily Shares  ETFs 2023.csv"
+if [ -f "$HISTORY_CSV" ]; then
+  echo ""
+  echo "Importing historical price data from CSV..."
+  "$BACKEND_VENV/bin/python" import_history.py "$HISTORY_CSV" || echo "History import skipped (file unreadable)."
+else
+  echo ""
+  echo "No historical CSV found at $HISTORY_CSV — skipping history import."
+fi
+
 # --- Systemd services ---
 if [ -d /etc/systemd/system ] && [ -d "$REPO_DIR/deploy" ]; then
   echo ""

@@ -918,9 +918,16 @@ async function loadMarket() {
   const modal = $("market-modal");
   modal.classList.remove("hidden");
   $("market-search").value = "";
-  if (!cachedStocks || !cachedStocks.length) {
-    await loadStocks();
+  $("market-table").classList.remove("hidden");
+  $("market-empty").classList.add("hidden");
+  $("market-body").innerHTML = "";
+
+  try {
+    await loadStocks(true);
+  } catch (e) {
+    console.error("Failed to load market data:", e);
   }
+
   document.querySelectorAll("#market-table th").forEach((th) => {
     th.classList.remove("sort-asc", "sort-desc");
     if (th.dataset.sort === marketSort.column) {
@@ -928,6 +935,11 @@ async function loadMarket() {
     }
   });
   renderMarketTable();
+
+  if (!cachedStocks || !cachedStocks.length) {
+    $("market-table").classList.add("hidden");
+    $("market-empty").classList.remove("hidden");
+  }
 }
 
 document.querySelectorAll("#market-table th[data-sort]").forEach((th) => {
