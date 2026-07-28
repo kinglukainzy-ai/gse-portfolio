@@ -88,6 +88,7 @@ async function init() {
 
   const me = await api("/api/me", { auth: false, silent404: true });
   if (me) {
+    clearAppCache();
     showDashboard();
     await loadEverything();
   } else {
@@ -133,6 +134,7 @@ function setupWebAuthForm() {
 
     try {
       await api(`/api/auth/${mode}`, { method: "POST", body: { username, password }, auth: false });
+      clearAppCache();
       showDashboard();
       await loadEverything();
     } catch (e) {
@@ -257,6 +259,7 @@ function mountTelegramWidget(botUsername) {
 async function handleTelegramAuth(user) {
   try {
     await api("/api/auth/telegram", { method: "POST", body: user, auth: false });
+    clearAppCache();
     showDashboard();
     await loadEverything();
   } catch (e) {
