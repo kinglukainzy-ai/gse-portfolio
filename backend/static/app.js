@@ -245,8 +245,7 @@ async function loadEverything() {
   overlay.classList.remove("hidden");
   textEl.textContent = "Loading…";
   try {
-    await loadStocks();
-    await loadHoldings();
+    await Promise.all([loadStocks(), loadHoldings()]);
     overlay.classList.add("hidden");
   } catch (e) {
     textEl.textContent = "Couldn't load data — check your connection and try refreshing.";
@@ -725,6 +724,105 @@ $("view-tx-btn").addEventListener("click", () => {
 
 $("history-close").addEventListener("click", () => {
   $("history-modal").classList.add("hidden");
+});
+
+$("view-market-btn").addEventListener("click", loadMarket);
+$("market-close").addEventListener("click", () => $("market-modal").classList.add("hidden"));
+$("market-search").addEventListener("input", renderMarketTable);
+
+let marketSort = { column: "symbol", dir: "asc" };
+
+function renderMarketTable(stocks) {
+  const body = $("market-body");
+  body.innerHTML = "";
+  const searchVal = ($("market-search").value || "").trim().toUpperCase();
+  let list = stocks || cachedStocks || [];
+  if (searchVal) {
+    list = list.filter(
+      (s) => s.symbol.includes(searchVal) || (s.name && s.name.toUpperCase().includes(searchVal))
+    );
+  }
+  list = list.slice().sort((a, b) => {
+    let av = a[marketSort.column];
+    let bv = b[marketSort.column];
+    if (typeof av === "string") av = av.toUpperCase();
+    if (typeof bv === "string") bv = bv.toUpperCase();
+    if (av == null) av = "";
+    if (bv == null) bv = "";
+    if (av < bv) return marketSort.dir === "asc" ? -1 : 1;
+    if (av > bv) return marketSort.dir === "asc" ? 1 : -1;
+    return 0;
+  });
+
+  $("market-empty").classList.toggle("hidden", list.length > 0);
+  $("market-table").classList.toggle("hidden", list.length === 0);
+
+  for (const s of list) {
+    const tr = document.createElement("tr");
+
+    const symTd = document.createElement("td");
+    const logo = stockLogo(s.symbol, 22, "market-logo", "market-letter");
+    symTd.appendChild(logo);
+    const symSpan = document.createElement("span");
+    symSpan.textContent = s.symbol;
+    symSpan.className = "clickable-symbol";
+    symSpan.addEventListener("click", () => {
+      $("market-modal").classList.add("hidden");
+      showStockDetail(s.symbol);
+    });
+    symTd.appendChild(symSpan);
+    tr.appendChild(symTd);
+
+    const nameTd = document.createElement("td");
+    nameTd.textContent = s.name || "";
+    tr.appendChild(nameTd);
+
+    const priceTd = document.createElement("td");
+    priceTd.textContent = s.price != null ? fmtMoney(s.price) : "—";
+    tr.appendChild(priceTd);
+
+    const changeTd = document.createElement("td");
+    const changeVal = s.change || 0;
+    changeTd.textContent = changeVal >= 0 ? `+${changeVal.toFixed(2)}` : changeVal.toFixed(2);
+    changeTd.className = changeVal > 0 ? "pl-positive" : changeVal < 0 ? "pl-negative" : "";
+    tr.appendChild(changeTd);
+
+    body.appendChild(tr);
+  }
+}
+
+function sortMarket(column) {
+  if (marketSort.column === column) {
+    marketSort.dir = marketSort.dir === "asc" ? "desc" : "asc";
+  } else {
+    marketSort.column = column;
+    marketSort.dir = "asc";
+  }
+  document.querySelectorAll("#market-table th").forEach((th) => {
+    th.classList.toggle("sort-asc", th.dataset.sort === marketSort.column && marketSort.dir === "asc");
+    th.classList.toggle("sort-desc", th.dataset.sort === marketSort.column && marketSort.dir === "desc");
+  });
+  renderMarketTable();
+}
+
+async function loadMarket() {
+  const modal = $("market-modal");
+  modal.classList.remove("hidden");
+  $("market-search").value = "";
+  if (!cachedStocks || !cachedStocks.length) {
+    await loadStocks();
+  }
+  document.querySelectorAll("#market-table th").forEach((th) => {
+    th.classList.remove("sort-asc", "sort-desc");
+    if (th.dataset.sort === marketSort.column) {
+      th.classList.add(marketSort.dir === "asc" ? "sort-asc" : "sort-desc");
+    }
+  });
+  renderMarketTable();
+}
+
+document.querySelectorAll("#market-table th[data-sort]").forEach((th) => {
+  th.addEventListener("click", () => sortMarket(th.dataset.sort));
 });
 
 $("tx-cancel").addEventListener("click", () => $("tx-modal").classList.add("hidden"));

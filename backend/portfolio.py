@@ -6,11 +6,15 @@ weighted-average cost basis, which is what most retail brokerage statements
 (including IC Wealth's) report against.
 """
 import os
+import time
 import httpx
 import db
 
 GSE_LIVE_URL = os.environ.get("GSE_LIVE_URL", "https://dev.kwayisi.org/apis/gse/live")
 HTTP_TIMEOUT = float(os.environ.get("GSE_HTTP_TIMEOUT", "8"))
+LIVE_PRICE_CACHE_TTL = 30
+
+_live_prices_cache: dict[str, object] = {"timestamp": 0.0, "prices": {}}
 
 GSE_COMPANIES = {
     "AADS": "AADS",
@@ -63,7 +67,12 @@ async def fetch_live_prices() -> dict[str, dict]:
     """
     Hits the public GSE live-price API.
     Returns {SYMBOL: {"price": float, "change": float, "volume": int}}.
+    Caches the result for 30 seconds to avoid redundant external calls.
     """
+    now = time.time()
+    if now - float(_live_prices_cache["timestamp"]) < LIVE_PRICE_CACHE_TTL:
+        return _live_prices_cache["prices"]
+
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
         try:
             resp = await client.get(GSE_LIVE_URL)
@@ -91,6 +100,9 @@ async def fetch_live_prices() -> dict[str, dict]:
                 continue
     if not prices:
         raise PriceFetchError("GSE live price API returned no usable rows")
+
+    _live_prices_cache["timestamp"] = time.time()
+    _live_prices_cache["prices"] = prices
     return prices
 
 

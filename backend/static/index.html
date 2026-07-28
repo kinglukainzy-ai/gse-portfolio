@@ -94,6 +94,7 @@
       <div class="section-header">
         <h2>Holdings</h2>
         <div class="header-actions">
+          <button id="view-market-btn" class="btn-ghost">Market</button>
           <button id="view-tx-btn" class="btn-ghost">Trade history</button>
           <button id="add-tx-btn" class="btn-primary">Log a trade</button>
         </div>
@@ -175,6 +176,33 @@
           <button type="submit" class="btn-primary">Save</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Market overview modal -->
+  <div id="market-modal" class="modal hidden">
+    <div class="modal-card market-card">
+      <div class="modal-header">
+        <h2>Market overview</h2>
+        <button type="button" id="market-close" class="btn-ghost">Close</button>
+      </div>
+      <div class="market-controls">
+        <input type="text" id="market-search" placeholder="Search symbol or name…" autocomplete="off">
+      </div>
+      <div class="table-wrap">
+        <table id="market-table">
+          <thead>
+            <tr>
+              <th data-sort="symbol">Symbol</th>
+              <th data-sort="name">Name</th>
+              <th data-sort="price">Price</th>
+              <th data-sort="change">Change</th>
+            </tr>
+          </thead>
+          <tbody id="market-body"></tbody>
+        </table>
+        <p id="market-empty" class="empty-note hidden">No market data available yet.</p>
+      </div>
     </div>
   </div>
 
