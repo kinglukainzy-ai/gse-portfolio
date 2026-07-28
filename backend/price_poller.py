@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 
 import db
 import portfolio
@@ -20,6 +21,8 @@ log = logging.getLogger("price-poller")
 
 FAILURE_FILE = os.path.join(os.path.dirname(db.DB_PATH), "poller_failures.json")
 ALERT_THRESHOLD = 3
+MAX_RETRIES = 3
+RETRY_BACKOFF_BASE = 2  # seconds
 
 
 def _read_failures() -> int:
@@ -72,10 +75,23 @@ def _send_alert(count: int):
 async def main():
     db.init_db()
 
-    try:
-        prices = await portfolio.fetch_live_prices()
-    except portfolio.PriceFetchError as e:
-        log.error("Could not fetch live prices, skipping poller run: %s", e)
+    prices = None
+    last_err = None
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
+            log.info("Fetching live prices (attempt %d/%d)...", attempt, MAX_RETRIES)
+            prices = await portfolio.fetch_live_prices()
+            break
+        except portfolio.PriceFetchError as e:
+            last_err = e
+            if attempt < MAX_RETRIES:
+                wait = RETRY_BACKOFF_BASE * attempt
+                log.warning("Attempt %d failed: %s — retrying in %ds", attempt, e, wait)
+                await asyncio.sleep(wait)
+            else:
+                log.error("All %d attempts failed: %s", MAX_RETRIES, e)
+
+    if prices is None:
         _record_failure()
         return
 

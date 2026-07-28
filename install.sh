@@ -127,14 +127,29 @@ cd "$REPO_DIR/backend"
 "$BACKEND_VENV/bin/python" price_poller.py || echo "Price poller skipped (API unreachable)."
 
 # --- Import historical data if available ---
-HISTORY_CSV="$REPO_DIR/Daily Shares  ETFs 2023.csv"
-if [ -f "$HISTORY_CSV" ]; then
-  echo ""
-  echo "Importing historical price data from CSV..."
+echo ""
+echo "Looking for historical price CSV..."
+HISTORY_CSV=""
+for candidate in \
+  "$REPO_DIR/Daily Shares  ETFs 2023.csv" \
+  "$REPO_DIR/backend/Daily Shares  ETFs 2023.csv" \
+  "$HOME/Downloads/Daily Shares  ETFs 2023.csv" \
+  "/tmp/Daily Shares  ETFs 2023.csv"
+do
+  if [ -f "$candidate" ]; then
+    HISTORY_CSV="$candidate"
+    echo "Found: $HISTORY_CSV"
+    break
+  fi
+done
+
+if [ -n "$HISTORY_CSV" ]; then
+  echo "Importing historical price data..."
   "$BACKEND_VENV/bin/python" import_history.py "$HISTORY_CSV" || echo "History import skipped (file unreadable)."
 else
-  echo ""
-  echo "No historical CSV found at $HISTORY_CSV — skipping history import."
+  echo "No historical CSV found."
+  echo "  To import past data, place 'Daily Shares  ETFs 2023.csv' in the repo root and re-run."
+  echo "  (It is gitignored because it's large — download it from the GSE market report.)"
 fi
 
 # --- Systemd services ---

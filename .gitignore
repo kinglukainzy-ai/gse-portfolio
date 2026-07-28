@@ -23,5 +23,5 @@ Thumbs.db
 
 # Data files (large, not source)
 *.xlsx
-*.csv
 *.pdf
+backend/static/logos/manifest.csv
