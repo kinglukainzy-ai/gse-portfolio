@@ -40,7 +40,9 @@
       "Bash(SECRET_KEY=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ALLOWED_IDS=\"\" COOKIE_SECURE=false .venv/bin/python *)",
       "Bash(SECRET_KEY=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa ALLOWED_IDS='' COOKIE_SECURE=false .venv/bin/python -c ' *)",
       "Bash(pkill -f uvicorn)",
-      "Bash(rm -f /tmp/test_logos.db)"
+      "Bash(rm -f /tmp/test_logos.db)",
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(pip install *)"
     ]
   }
 }

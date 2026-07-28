@@ -196,7 +196,7 @@ def list_transactions(telegram_id: int = Depends(require_user)):
 
 @app.post("/api/transactions")
 def create_transaction(tx: TransactionIn, telegram_id: int = Depends(require_user)):
-    symbol = tx.symbol.strip().upper()
+    symbol = db.normalize_symbol(tx.symbol.strip().upper())
     if not symbol.isalnum():
         raise HTTPException(status_code=400, detail="symbol must be alphanumeric")
     if symbol not in portfolio.GSE_COMPANIES:
