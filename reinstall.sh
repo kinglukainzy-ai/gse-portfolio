@@ -48,8 +48,12 @@ fi
 # --- Re-run the install script ---
 echo "Running install.sh..."
 cd "$REPO_DIR"
-# Pass 'n' to Caddy prompt, 'y' to systemd prompt
-echo "n" | bash "$REPO_DIR/install.sh"
+# Pass 'y' to systemd prompt, 'y' to Caddy prompt
+printf 'y\ny\n' | bash "$REPO_DIR/install.sh"
 
 echo ""
 echo "=== Reinstall complete ==="
+echo ""
+echo "Next steps:"
+echo "  sudo systemctl status gse-backend gse-bot gse-snapshot.timer gse-poller.timer"
+echo "  tail -f /var/log/syslog | grep price-poller"
