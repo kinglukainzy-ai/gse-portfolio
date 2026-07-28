@@ -84,7 +84,7 @@ function setupStockPicker() {
   function renderDropdown(stocks) {
     dropdown.innerHTML = "";
     activeIdx = -1;
-    if (!stocks.length) {
+    if (!stocks || !stocks.length) {
       dropdown.classList.add("hidden");
       return;
     }
@@ -125,20 +125,22 @@ function setupStockPicker() {
 
   function filterStocks(query) {
     if (!cachedStocks) return [];
-    const q = query.trim().toUpperCase();
+    const q = (query || "").trim().toUpperCase();
     if (!q) return cachedStocks;
     return cachedStocks.filter(
-      (s) => s.symbol.includes(q) || s.name.toUpperCase().includes(q)
+      (s) => s.symbol.includes(q) || (s.name && s.name.toUpperCase().includes(q))
     );
   }
 
-  input.addEventListener("focus", () => {
-    if (cachedStocks) renderDropdown(filterStocks(input.value));
-  });
-
-  input.addEventListener("input", () => {
+  async function updatePicker() {
+    if (!cachedStocks || !cachedStocks.length) {
+      await loadStocks();
+    }
     renderDropdown(filterStocks(input.value));
-  });
+  }
+
+  input.addEventListener("focus", updatePicker);
+  input.addEventListener("input", updatePicker);
 
   input.addEventListener("blur", () => {
     setTimeout(() => dropdown.classList.add("hidden"), 150);
@@ -163,6 +165,8 @@ function setupStockPicker() {
       if (filtered[activeIdx]) pickStock(filtered[activeIdx]);
     }
   });
+
+  window.openPickerDropdown = updatePicker;
 }
 
 function mountTelegramWidget(botUsername) {
@@ -241,23 +245,110 @@ async function loadEverything() {
   overlay.classList.remove("hidden");
   textEl.textContent = "Loading…";
   try {
-    await Promise.all([loadHoldings(), loadChart(), loadStocks()]);
+    await loadStocks();
+    await loadHoldings();
     overlay.classList.add("hidden");
   } catch (e) {
     textEl.textContent = "Couldn't load data — check your connection and try refreshing.";
+    return;
+  }
+
+  try {
+    await loadChart();
+  } catch (e) {
+    console.error("Chart load failed:", e);
+    $("progress-chart").style.display = "none";
+    $("chart-empty").textContent = "Error loading chart.";
+    $("chart-empty").classList.remove("hidden");
   }
 }
 
 async function loadStocks() {
-  if (cachedStocks) return;
+  if (cachedStocks && cachedStocks.length > 0) return;
   try {
-    const data = await api("/api/stocks");
-    cachedStocks = data.stocks || [];
-    for (const s of cachedStocks) {
-      if (s.logo) LOGO_EXTS[s.symbol] = s.logo;
+    const data = await api("/api/stocks", { auth: false });
+    if (data && data.stocks && data.stocks.length > 0) {
+      cachedStocks = data.stocks;
+      for (const s of cachedStocks) {
+        if (s.logo) LOGO_EXTS[s.symbol] = s.logo;
+      }
     }
-  } catch (_) {
-    cachedStocks = [];
+  } catch (_) {}
+}
+
+async function loadTransactions() {
+  const body = $("history-body");
+  const emptyEl = $("history-empty");
+  const tableEl = $("history-table");
+  body.innerHTML = "";
+  try {
+    const txs = await api("/api/transactions");
+    if (!txs || txs.length === 0) {
+      emptyEl.classList.remove("hidden");
+      tableEl.classList.add("hidden");
+      return;
+    }
+    emptyEl.classList.add("hidden");
+    tableEl.classList.remove("hidden");
+
+    for (const t of txs) {
+      const tr = document.createElement("tr");
+
+      const dateTd = document.createElement("td");
+      dateTd.textContent = t.trade_date;
+      tr.appendChild(dateTd);
+
+      const typeTd = document.createElement("td");
+      typeTd.textContent = t.side.toUpperCase();
+      typeTd.className = t.side === "buy" ? "pl-positive" : "pl-negative";
+      tr.appendChild(typeTd);
+
+      const symTd = document.createElement("td");
+      const logo = stockLogo(t.symbol, 20, "holding-logo", "holding-letter");
+      symTd.appendChild(logo);
+      const symSpan = document.createElement("span");
+      symSpan.textContent = t.symbol;
+      symSpan.style.fontWeight = "600";
+      symTd.appendChild(symSpan);
+      tr.appendChild(symTd);
+
+      const sharesTd = document.createElement("td");
+      sharesTd.textContent = t.shares;
+      tr.appendChild(sharesTd);
+
+      const priceTd = document.createElement("td");
+      priceTd.textContent = fmtMoney(t.price);
+      tr.appendChild(priceTd);
+
+      const totalTd = document.createElement("td");
+      totalTd.textContent = fmtMoney(t.shares * t.price);
+      tr.appendChild(totalTd);
+
+      const actionTd = document.createElement("td");
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn-delete";
+      delBtn.textContent = "Delete";
+      delBtn.title = "Delete transaction";
+      delBtn.addEventListener("click", async () => {
+        if (confirm(`Delete ${t.side} transaction of ${t.shares} ${t.symbol}?`)) {
+          try {
+            await api(`/api/transactions/${t.id}`, { method: "DELETE" });
+            await loadTransactions();
+            await loadEverything();
+          } catch (err) {
+            alert("Could not delete transaction: " + err.message);
+          }
+        }
+      });
+      actionTd.appendChild(delBtn);
+      tr.appendChild(actionTd);
+
+      body.appendChild(tr);
+    }
+  } catch (err) {
+    emptyEl.textContent = "Error loading transactions.";
+    emptyEl.classList.remove("hidden");
+    tableEl.classList.add("hidden");
   }
 }
 
@@ -389,9 +480,14 @@ function letterAvatar(symbol, size, className) {
 // ---------- chart ----------
 
 function fmtDate(iso) {
-  const [, m, d] = iso.split("-");
+  if (!iso || typeof iso !== "string" || !iso.includes("-")) return iso || "";
+  const parts = iso.split("-");
+  if (parts.length < 3) return iso;
+  const [, m, d] = parts;
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  return `${months[parseInt(m, 10) - 1]} ${parseInt(d, 10)}`;
+  const monthIdx = parseInt(m, 10) - 1;
+  if (monthIdx < 0 || monthIdx > 11) return iso;
+  return `${months[monthIdx]} ${parseInt(d, 10)}`;
 }
 
 function chartGainBadge(series) {
@@ -492,7 +588,13 @@ function renderSeparateChart(perSymbol) {
   const palette = ["#4ade80", "#60a5fa", "#f472b6", "#facc15", "#a78bfa", "#fb923c", "#2dd4bf"];
 
   const allDates = new Set();
-  Object.values(perSymbol).forEach((series) => series.forEach((p) => allDates.add(p.date)));
+  Object.values(perSymbol).forEach((series) => {
+    if (series && Array.isArray(series)) {
+      series.forEach((p) => {
+        if (p && p.date) allDates.add(p.date);
+      });
+    }
+  });
   const labels = Array.from(allDates).sort();
 
   const datasets = Object.entries(perSymbol).map(([symbol, series], i) => {
@@ -525,7 +627,7 @@ function chartOptions(seriesWithCost) {
         grid: { color: "rgba(255,255,255,0.06)" },
       },
       x: {
-        ticks: { callback: function(val, idx) { return fmtDate(this.getLabelForValue(idx)); } },
+        ticks: { callback: function(val) { return fmtDate(this.getLabelForValue(val)); } },
         grid: { display: false },
       },
     },
@@ -536,6 +638,9 @@ function chartOptions(seriesWithCost) {
           title: (items) => items.length ? fmtDate(items[0].label) : "",
           label: function(ctx) {
             const val = ctx.parsed.y;
+            if (val === null || val === undefined || isNaN(val)) {
+              return `${ctx.dataset.label}: —`;
+            }
             const prefix = `${ctx.dataset.label}: GH₵${val.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
             if (!seriesWithCost || ctx.datasetIndex !== 0) return prefix;
             const pt = seriesWithCost[ctx.dataIndex];
@@ -602,12 +707,24 @@ function switchChartMode(mode) {
   loadChart();
 }
 
-$("add-tx-btn").addEventListener("click", () => {
+$("add-tx-btn").addEventListener("click", async () => {
   $("tx-error").classList.add("hidden");
   $("tx-form").reset();
   $("tx-date").valueAsDate = new Date();
   $("tx-modal").classList.remove("hidden");
   $("tx-symbol").focus();
+  if (window.openPickerDropdown) {
+    await window.openPickerDropdown();
+  }
+});
+
+$("view-tx-btn").addEventListener("click", () => {
+  $("history-modal").classList.remove("hidden");
+  loadTransactions();
+});
+
+$("history-close").addEventListener("click", () => {
+  $("history-modal").classList.add("hidden");
 });
 
 $("tx-cancel").addEventListener("click", () => $("tx-modal").classList.add("hidden"));

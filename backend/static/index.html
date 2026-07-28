@@ -93,7 +93,10 @@
     <section class="holdings-section">
       <div class="section-header">
         <h2>Holdings</h2>
-        <button id="add-tx-btn" class="btn-primary">Log a trade</button>
+        <div class="header-actions">
+          <button id="view-tx-btn" class="btn-ghost">Trade history</button>
+          <button id="add-tx-btn" class="btn-primary">Log a trade</button>
+        </div>
       </div>
       <table id="holdings-table">
         <thead>
@@ -114,17 +117,43 @@
     </section>
   </div>
 
+  <!-- Trade history modal -->
+  <div id="history-modal" class="modal hidden">
+    <div class="modal-card history-card">
+      <div class="modal-header">
+        <h2>Trade history</h2>
+        <button type="button" id="history-close" class="btn-ghost">Close</button>
+      </div>
+      <div class="table-wrap">
+        <table id="history-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Symbol</th>
+              <th>Shares</th>
+              <th>Price</th>
+              <th>Total</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="history-body"></tbody>
+        </table>
+        <p id="history-empty" class="empty-note hidden">No trades recorded yet.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- Add-transaction modal -->
   <div id="tx-modal" class="modal hidden">
     <div class="modal-card">
       <h2>Log a trade</h2>
       <form id="tx-form">
-        <label>Symbol
-          <div class="stock-picker-wrap">
-            <input type="text" id="tx-symbol" maxlength="12" required placeholder="Search stocks…" autocomplete="off">
-            <ul id="tx-symbol-dropdown" class="stock-dropdown hidden"></ul>
-          </div>
-        </label>
+        <label for="tx-symbol">Symbol</label>
+        <div class="stock-picker-wrap">
+          <input type="text" id="tx-symbol" maxlength="12" required placeholder="Search stocks…" autocomplete="off">
+          <ul id="tx-symbol-dropdown" class="stock-dropdown hidden"></ul>
+        </div>
         <label>Side
           <select id="tx-side">
             <option value="buy">Buy</option>

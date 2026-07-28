@@ -135,7 +135,7 @@ async def get_price_with_fallback(symbol: str, live_cache: dict[str, dict] | Non
     Returns {"price": float|None, "source": str, "change": float, "volume": int}.
     Tries the live cache/API first, falls back to the last daily snapshot.
     """
-    symbol = symbol.upper()
+    symbol = db.normalize_symbol(symbol)
     if live_cache is not None and symbol in live_cache:
         entry = live_cache[symbol]
         return {"price": entry["price"], "source": "live",

@@ -64,6 +64,29 @@ def init_db():
         )
         _migrate_snapshots(conn)
         _migrate_users(conn)
+        _migrate_symbol_aliases(conn)
+
+
+SYMBOL_ALIASES = {
+    "MTN": "MTNGH",
+    "SCB-PREF": "SCBPREF",
+    "SCB_PREF": "SCBPREF",
+    "DAS": "DASPHARMA",
+    "ECL": "EGL",
+}
+
+
+def normalize_symbol(symbol: str) -> str:
+    if not symbol:
+        return symbol
+    sym = symbol.strip().upper()
+    return SYMBOL_ALIASES.get(sym, sym)
+
+
+def _migrate_symbol_aliases(conn):
+    for alias, canonical in SYMBOL_ALIASES.items():
+        conn.execute("UPDATE transactions SET symbol = ? WHERE symbol = ?", (canonical, alias))
+
 
 
 def _migrate_users(conn):
@@ -142,7 +165,7 @@ def create_web_user(username: str, password_hash: str) -> int:
 
 def add_transaction(telegram_id: int, symbol: str, side: str, shares: float,
                      price: float, trade_date: str | None = None):
-    symbol = symbol.strip().upper()
+    symbol = normalize_symbol(symbol)
     if side not in ("buy", "sell"):
         raise ValueError("side must be 'buy' or 'sell'")
     if shares <= 0 or price < 0:
@@ -169,7 +192,7 @@ def get_transactions(telegram_id: int, symbol: str | None = None):
             rows = conn.execute(
                 """SELECT * FROM transactions WHERE telegram_id = ? AND symbol = ?
                    ORDER BY trade_date ASC, id ASC""",
-                (telegram_id, symbol.upper()),
+                (telegram_id, normalize_symbol(symbol)),
             ).fetchall()
         else:
             rows = conn.execute(

@@ -205,6 +205,26 @@ tr:last-child td { border-bottom: none; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .form-error { color: var(--red); font-size: 0.82rem; }
 
+.header-actions { display: flex; align-items: center; gap: 8px; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+.history-card { width: 640px; max-width: 95vw; max-height: 85vh; display: flex; flex-direction: column; }
+.history-card .table-wrap { overflow-y: auto; max-height: 400px; margin-top: 8px; }
+
+.btn-delete {
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: var(--red);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.15s ease;
+}
+.btn-delete:hover {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: var(--red);
+}
+
 /* stock picker dropdown */
 .stock-picker-wrap { position: relative; }
 .stock-dropdown {
@@ -218,7 +238,8 @@ tr:last-child td { border-bottom: none; }
   border: 1px solid var(--border);
   border-radius: 8px;
   margin-top: 4px;
-  z-index: 20;
+  z-index: 100;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   list-style: none;
   padding: 4px 0;
 }
@@ -315,5 +336,5 @@ tr:last-child td { border-bottom: none; }
   .totals-row { grid-template-columns: repeat(2, 1fr); }
   table { font-size: 0.8rem; }
   th, td { padding: 8px 4px; }
-  .detail-card { width: 90vw; }
+  .detail-card, .history-card { width: 90vw; }
 }

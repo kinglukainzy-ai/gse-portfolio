@@ -87,3 +87,48 @@ async def test_logout(session_cookie, setup_user):
         resp = await client.post("/api/logout")
     assert resp.status_code == 200
     assert resp.json()["ok"] is True
+
+
+@pytest.mark.asyncio
+async def test_stocks_endpoint():
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/api/stocks")
+    assert resp.status_code == 200
+    stocks = resp.json()["stocks"]
+    assert len(stocks) == 39
+    symbols = [s["symbol"] for s in stocks]
+    assert "MTNGH" in symbols
+    assert "GCB" in symbols
+    assert "ACCESS" in symbols
+
+
+@pytest.mark.asyncio
+async def test_symbol_alias_normalization(session_cookie, setup_user):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", cookies=session_cookie) as client:
+        resp = await client.post("/api/transactions", json={
+            "symbol": "MTN", "side": "buy", "shares": 50, "price": 2.00
+        })
+        assert resp.status_code == 200
+        txs = (await client.get("/api/transactions")).json()
+        assert any(t["symbol"] == "MTNGH" for t in txs)
+
+
+@pytest.mark.asyncio
+async def test_delete_transaction(session_cookie, setup_user):
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test", cookies=session_cookie) as client:
+        resp = await client.post("/api/transactions", json={
+            "symbol": "GCB", "side": "buy", "shares": 10, "price": 5.00
+        })
+        assert resp.status_code == 200
+        txs = (await client.get("/api/transactions")).json()
+        tx_id = txs[0]["id"]
+
+        del_resp = await client.delete(f"/api/transactions/{tx_id}")
+        assert del_resp.status_code == 200
+        assert del_resp.json()["ok"] is True
+
+        after_txs = (await client.get("/api/transactions")).json()
+        assert len(after_txs) == 0

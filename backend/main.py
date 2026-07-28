@@ -69,21 +69,33 @@ async def stock_list():
     except portfolio.PriceFetchError:
         prices = {}
 
-    # Check which logos exist on disk
+    # Check which logos exist on disk (> 200 bytes)
     logos_dir = os.path.join(STATIC_DIR, "logos")
     logo_files = {}
     if os.path.isdir(logos_dir):
         for f in os.listdir(logos_dir):
             name, ext = os.path.splitext(f)
-            if ext and name.upper() != "MANIFEST":
-                logo_files[name.upper()] = ext.lstrip(".")
+            full_path = os.path.join(logos_dir, f)
+            try:
+                if ext and name.upper() != "MANIFEST" and os.path.isfile(full_path) and os.path.getsize(full_path) > 200:
+                    logo_files[name.upper()] = ext.lstrip(".")
+            except OSError:
+                continue
 
     stocks = []
-    for sym, entry in sorted(prices.items()):
+    for sym, company_name in sorted(portfolio.GSE_COMPANIES.items()):
+        price = None
+        if sym in prices:
+            price = prices[sym]["price"]
+        else:
+            last = db.latest_snapshot_price(sym)
+            if last is not None:
+                price = last
+
         stock = {
             "symbol": sym,
-            "name": portfolio.GSE_COMPANIES.get(sym, ""),
-            "price": entry["price"],
+            "name": company_name,
+            "price": price,
         }
         if sym in logo_files:
             stock["logo"] = logo_files[sym]
