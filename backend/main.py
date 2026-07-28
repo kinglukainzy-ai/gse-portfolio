@@ -199,6 +199,11 @@ def create_transaction(tx: TransactionIn, telegram_id: int = Depends(require_use
     symbol = tx.symbol.strip().upper()
     if not symbol.isalnum():
         raise HTTPException(status_code=400, detail="symbol must be alphanumeric")
+    if symbol not in portfolio.GSE_COMPANIES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"'{symbol}' isn't a recognized GSE ticker — pick it from the search list.",
+        )
     try:
         db.add_transaction(telegram_id, symbol, tx.side, tx.shares, tx.price, tx.trade_date)
     except ValueError as e:

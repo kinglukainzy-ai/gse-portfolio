@@ -743,6 +743,12 @@ $("tx-form").addEventListener("submit", async (e) => {
     errEl.classList.remove("hidden");
     return;
   }
+  if (cachedStocks && cachedStocks.length > 0 &&
+      !cachedStocks.some((s) => s.symbol === symbol)) {
+    errEl.textContent = `"${symbol}" isn't a recognized GSE ticker — pick it from the search list.`;
+    errEl.classList.remove("hidden");
+    return;
+  }
   if (isNaN(shares) || shares <= 0) {
     errEl.textContent = "Shares must be greater than 0.";
     errEl.classList.remove("hidden");
