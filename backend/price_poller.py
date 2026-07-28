@@ -1,5 +1,5 @@
 """
-Price poller: fetches live GSE prices every 10 minutes and writes them to
+Price poller: fetches live GSE prices every 1 minute and writes them to
 the `current_prices` table so user-facing requests never hit the upstream API.
 
 Sends a Telegram alert if the upstream API fails 3+ times in a row.

@@ -1,8 +1,8 @@
 [Unit]
-Description=Run GH Cedi Portfolio price poller every 10 minutes
+Description=Run GH Cedi Portfolio price poller every 3 minutes
 
 [Timer]
-OnCalendar=*:0/10
+OnCalendar=*:3/3
 Persistent=true
 
 [Install]

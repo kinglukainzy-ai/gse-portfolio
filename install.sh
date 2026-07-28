@@ -47,7 +47,7 @@ echo "Installing bot dependencies..."
 # --- Port selection ---
 port_in_use() {
   # Returns 0 (true) if something is already listening on $1
-  ss -tlnH 2>/dev/null | awk '{print $4}' | grep -qE "[:.]$1\$"
+  ss -tlnH 2>/dev/null | awk '{print $4}' | grep -qE "[:.]$1$"
 }
 
 find_free_port() {
@@ -58,9 +58,18 @@ find_free_port() {
   echo "$p"
 }
 
-echo ""
-read -rp "Port for the backend [default: 8000]: " PORT
-PORT="${PORT:-8000}"
+if [ -n "${PORT:-}" ]; then
+  echo "Using PORT=$PORT from environment."
+else
+  echo ""
+  read -rp "Port for the backend [default: 8000]: " PORT
+  PORT="${PORT:-8000}"
+fi
+
+if ! [[ "$PORT" =~ ^[0-9]+$ ]]; then
+  echo "WARNING: PORT='$PORT' is not numeric. Falling back to 8000."
+  PORT=8000
+fi
 
 if port_in_use "$PORT"; then
   SUGGESTED="$(find_free_port "$PORT")"
@@ -155,7 +164,11 @@ fi
 # --- Systemd services ---
 if [ -d /etc/systemd/system ] && [ -d "$REPO_DIR/deploy" ]; then
   echo ""
-  read -rp "Install systemd services? [y/N] " INSTALL_SERVICES
+  if [ -n "${INSTALL_SERVICES:-}" ]; then
+    echo "Using INSTALL_SERVICES=$INSTALL_SERVICES from environment."
+  else
+    read -rp "Install systemd services? [y/N] " INSTALL_SERVICES
+  fi
   if [[ "$INSTALL_SERVICES" =~ ^[Yy]$ ]]; then
     CURRENT_USER="${SUDO_USER:-$(whoami)}"
 
@@ -189,7 +202,11 @@ fi
 # --- Caddy ---
 if ! command -v caddy &>/dev/null && command -v apt-get &>/dev/null; then
   echo ""
-  read -rp "Install Caddy web server? [y/N] " INSTALL_CADDY
+  if [ -n "${INSTALL_CADDY:-}" ]; then
+    echo "Using INSTALL_CADDY=$INSTALL_CADDY from environment."
+  else
+    read -rp "Install Caddy web server? [y/N] " INSTALL_CADDY
+  fi
   if [[ "$INSTALL_CADDY" =~ ^[Yy]$ ]]; then
     sudo apt-get install -y -qq debian-keyring debian-archive-keyring apt-transport-https curl
     curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
@@ -209,7 +226,11 @@ if command -v caddy &>/dev/null; then
     echo ""
     echo "WARNING: port 80 and/or 443 is already in use (by: ${HOLDER:-unknown})."
     echo "Caddy will fail to start until that's freed up."
-    read -rp "Stop it now so Caddy can bind? [y/N] " STOP_HOLDER
+    if [ -n "${STOP_HOLDER:-}" ]; then
+      echo "Using STOP_HOLDER=$STOP_HOLDER from environment."
+    else
+      read -rp "Stop it now so Caddy can bind? [y/N] " STOP_HOLDER
+    fi
     if [[ "$STOP_HOLDER" =~ ^[Yy]$ ]] && [ -n "$HOLDER" ]; then
       for svc in $HOLDER; do
         sudo systemctl stop "$svc" 2>/dev/null && sudo systemctl disable "$svc" 2>/dev/null \
@@ -219,7 +240,11 @@ if command -v caddy &>/dev/null; then
   fi
 
   echo ""
-  read -rp "Domain name (e.g. gsewatch.duckdns.org, or leave blank to skip): " DOMAIN
+  if [ -n "${DOMAIN:-}" ]; then
+    echo "Using DOMAIN=$DOMAIN from environment."
+  else
+    read -rp "Domain name (e.g. gsewatch.duckdns.org, or leave blank to skip): " DOMAIN
+  fi
   if [ -n "$DOMAIN" ]; then
     cat > /tmp/gse-Caddyfile <<EOF
 $DOMAIN {

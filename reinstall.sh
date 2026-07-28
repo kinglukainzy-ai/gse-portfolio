@@ -48,8 +48,23 @@ fi
 # --- Re-run the install script ---
 echo "Running install.sh..."
 cd "$REPO_DIR"
-# Pass 'y' to systemd prompt, 'y' to Caddy prompt
-printf 'y\ny\n' | bash "$REPO_DIR/install.sh"
+
+# Preserve the existing port from .env so install.sh doesn't prompt for it
+ENV_FILE="$REPO_DIR/.env"
+if [ -f "$ENV_FILE" ] && grep -q "^PORT=" "$ENV_FILE"; then
+  EXISTING_PORT=$(grep "^PORT=" "$ENV_FILE" | head -1 | cut -d= -f2)
+  export PORT="$EXISTING_PORT"
+  echo "Preserving existing PORT=$PORT from .env"
+fi
+
+# Set non-interactive defaults for the remaining prompts
+export INSTALL_SERVICES="y"
+export INSTALL_CADDY="n"
+export STOP_HOLDER="n"
+export DOMAIN=""
+
+# Call install.sh non-interactively — it will use env vars and skip prompts
+bash "$REPO_DIR/install.sh"
 
 echo ""
 echo "=== Reinstall complete ==="
