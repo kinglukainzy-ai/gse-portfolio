@@ -130,25 +130,25 @@ if [ -d /etc/systemd/system ] && [ -d "$REPO_DIR/deploy" ]; then
     # Stop any existing units first — avoids stale ExecStart paths (e.g. from a
     # previous install run as a different user) fighting the new config, and
     # resets any crash-restart loop before we replace the unit files.
-    for svc in gse-backend gse-bot gse-snapshot.timer; do
+    for svc in gse-backend gse-bot gse-snapshot.timer gse-poller.timer; do
       if systemctl is-enabled "$svc" &>/dev/null || systemctl is-active "$svc" &>/dev/null; then
         sudo systemctl stop "$svc" 2>/dev/null || true
       fi
     done
 
-    for svc in gse-backend.service gse-bot.service gse-snapshot.service gse-snapshot.timer; do
+    for svc in gse-backend.service gse-bot.service gse-snapshot.service gse-snapshot.timer gse-poller.service gse-poller.timer; do
       sed "s|/opt/gse-portfolio|$REPO_DIR|g; s|User=%i|User=$CURRENT_USER|g; s|--port 8000|--port $PORT|g" \
         "$REPO_DIR/deploy/$svc" | sudo tee "/etc/systemd/system/$svc" >/dev/null
     done
     sudo systemctl reset-failed gse-backend gse-bot 2>/dev/null || true
     sudo systemctl daemon-reload
-    sudo systemctl enable gse-backend gse-bot gse-snapshot.timer
+    sudo systemctl enable gse-backend gse-bot gse-snapshot.timer gse-poller.timer
     if grep -q "your-telegram-bot-token-here" "$ENV_FILE" 2>/dev/null; then
       echo "Services installed but NOT started — edit $ENV_FILE first, then:"
-      echo "  sudo systemctl start gse-backend gse-bot gse-snapshot.timer"
+      echo "  sudo systemctl start gse-backend gse-bot gse-snapshot.timer gse-poller.timer"
     else
       sudo systemctl restart gse-backend gse-bot
-      sudo systemctl start gse-snapshot.timer
+      sudo systemctl start gse-snapshot.timer gse-poller.timer
       echo "Services started."
     fi
   fi

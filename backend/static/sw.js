@@ -8,6 +8,12 @@ const PRECACHE = [
   "/static/icons/icon-512.png",
 ];
 
+const NETWORK_FIRST = [
+  "/",
+  "/static/app.js",
+  "/static/styles.css",
+];
+
 self.addEventListener("install", (e) => {
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE))
@@ -28,6 +34,19 @@ self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
 
   if (url.pathname.startsWith("/api/")) return;
+
+  if (NETWORK_FIRST.includes(url.pathname)) {
+    e.respondWith(
+      fetch(e.request).then((resp) => {
+        if (resp.ok && e.request.method === "GET") {
+          const clone = resp.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(e.request, clone));
+        }
+        return resp;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
 
   e.respondWith(
     caches.match(e.request).then((cached) => {

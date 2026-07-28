@@ -11,7 +11,73 @@ let chartMode = "combined"; // "combined" | "separate"
 let cachedHoldings = null;
 let cachedStocks = null;
 
+const CACHE_KEYS = {
+  stocks: "cache_stocks",
+  holdings: "cache_holdings",
+  chart: "cache_chart",
+  chartMode: "cache_chart_mode",
+};
+
+function clearAppCache() {
+  Object.values(CACHE_KEYS).forEach(k => localStorage.removeItem(k));
+}
+
+function renderFromCache() {
+  let hasAny = false;
+
+  const stocksRaw = localStorage.getItem(CACHE_KEYS.stocks);
+  if (stocksRaw) {
+    try {
+      cachedStocks = JSON.parse(stocksRaw);
+      for (const s of cachedStocks) {
+        if (s.logo) LOGO_EXTS[s.symbol] = s.logo;
+      }
+      hasAny = true;
+    } catch (_) {}
+  }
+
+  const holdingsRaw = localStorage.getItem(CACHE_KEYS.holdings);
+  if (holdingsRaw) {
+    try {
+      cachedHoldings = JSON.parse(holdingsRaw);
+      renderTotals(cachedHoldings.totals);
+      renderHoldingsTable(cachedHoldings.holdings);
+      $("stale-badge").classList.toggle("hidden", !cachedHoldings.any_price_stale);
+      $("stale-badge").textContent = cachedHoldings.any_price_missing
+        ? "prices unavailable"
+        : "prices delayed";
+      hasAny = true;
+    } catch (_) {}
+  }
+
+  const modeRaw = localStorage.getItem(CACHE_KEYS.chartMode);
+  if (modeRaw) {
+    chartMode = modeRaw;
+    $("view-combined").classList.toggle("active", chartMode === "combined");
+    $("view-separate").classList.toggle("active", chartMode === "separate");
+  }
+
+  const chartRaw = localStorage.getItem(CACHE_KEYS.chart);
+  if (chartRaw && chartMode === "combined") {
+    try {
+      const chartData = JSON.parse(chartRaw);
+      if (chartData && chartData.series && chartData.series.length > 0) {
+        renderCombinedChart(chartData);
+        hasAny = true;
+      }
+    } catch (_) {}
+  }
+
+  return hasAny;
+}
+
 // ---------- bootstrap ----------
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    window.location.reload();
+  });
+}
 
 async function init() {
   const config = await api("/api/config", { auth: false }).catch(() => ({ bot_username: "" }));
@@ -219,7 +285,9 @@ async function api(path, { method = "GET", body, auth = true, silent404 = false 
       const j = await resp.json();
       detail = j.detail || detail;
     } catch (_) {}
-    throw new Error(detail);
+    const err = new Error(detail);
+    err.status = resp.status;
+    throw err;
   }
   if (resp.status === 204) return null;
   return resp.json();
@@ -228,6 +296,7 @@ async function api(path, { method = "GET", body, auth = true, silent404 = false 
 // ---------- view toggling ----------
 
 function showLogin() {
+  clearAppCache();
   $("login-screen").classList.remove("hidden");
   $("dashboard-screen").classList.add("hidden");
 }
@@ -242,28 +311,58 @@ function showDashboard() {
 async function loadEverything() {
   const overlay = $("loading-overlay");
   const textEl = overlay.querySelector(".loading-text");
-  overlay.classList.remove("hidden");
-  textEl.textContent = "Loading…";
-  try {
-    await Promise.all([loadStocks(), loadHoldings()]);
-    overlay.classList.add("hidden");
-  } catch (e) {
-    textEl.textContent = "Couldn't load data — check your connection and try refreshing.";
-    return;
-  }
 
-  try {
-    await loadChart();
-  } catch (e) {
-    console.error("Chart load failed:", e);
-    $("progress-chart").style.display = "none";
-    $("chart-empty").textContent = "Error loading chart.";
-    $("chart-empty").classList.remove("hidden");
+  const hasCache = renderFromCache();
+
+  if (hasCache) {
+    try {
+      await Promise.all([loadStocks(true), loadHoldings()]);
+    } catch (e) {
+      if (e.status === 401) {
+        clearAppCache();
+        showLogin();
+        return;
+      }
+      console.error("Background data refresh failed:", e);
+    }
+
+    try {
+      await loadChart();
+    } catch (e) {
+      if (e.status === 401) {
+        clearAppCache();
+        showLogin();
+        return;
+      }
+      console.error("Chart load failed:", e);
+      $("progress-chart").style.display = "none";
+      $("chart-empty").textContent = "Error loading chart.";
+      $("chart-empty").classList.remove("hidden");
+    }
+  } else {
+    overlay.classList.remove("hidden");
+    textEl.textContent = "Loading…";
+    try {
+      await Promise.all([loadStocks(), loadHoldings()]);
+      overlay.classList.add("hidden");
+    } catch (e) {
+      textEl.textContent = "Couldn't load data — check your connection and try refreshing.";
+      return;
+    }
+
+    try {
+      await loadChart();
+    } catch (e) {
+      console.error("Chart load failed:", e);
+      $("progress-chart").style.display = "none";
+      $("chart-empty").textContent = "Error loading chart.";
+      $("chart-empty").classList.remove("hidden");
+    }
   }
 }
 
-async function loadStocks() {
-  if (cachedStocks && cachedStocks.length > 0) return;
+async function loadStocks(force = false) {
+  if (!force && cachedStocks && cachedStocks.length > 0) return;
   try {
     const data = await api("/api/stocks", { auth: false });
     if (data && data.stocks && data.stocks.length > 0) {
@@ -271,6 +370,7 @@ async function loadStocks() {
       for (const s of cachedStocks) {
         if (s.logo) LOGO_EXTS[s.symbol] = s.logo;
       }
+      localStorage.setItem(CACHE_KEYS.stocks, JSON.stringify(cachedStocks));
     }
   } catch (_) {}
 }
@@ -360,6 +460,7 @@ async function loadHoldings() {
   $("stale-badge").textContent = data.any_price_missing
     ? "prices unavailable"
     : "prices delayed";
+  localStorage.setItem(CACHE_KEYS.holdings, JSON.stringify(data));
 }
 
 function fmtMoney(v) {
@@ -508,6 +609,8 @@ async function loadChart() {
   if (chartMode === "combined") {
     const data = await api("/api/history");
     renderCombinedChart(data);
+    localStorage.setItem(CACHE_KEYS.chart, JSON.stringify(data));
+    localStorage.setItem(CACHE_KEYS.chartMode, "combined");
   } else {
     const symbols = cachedHoldings ? cachedHoldings.holdings.map((h) => h.symbol) : [];
     const perSymbol = {};
@@ -515,6 +618,7 @@ async function loadChart() {
       perSymbol[sym] = (await api(`/api/history?symbol=${encodeURIComponent(sym)}`)).series;
     }
     renderSeparateChart(perSymbol);
+    localStorage.setItem(CACHE_KEYS.chartMode, "separate");
   }
 }
 
@@ -692,6 +796,7 @@ $("detail-close").addEventListener("click", () => $("detail-modal").classList.ad
 // ---------- events ----------
 
 $("logout-btn").addEventListener("click", async () => {
+  clearAppCache();
   await api("/api/logout", { method: "POST" });
   location.reload();
 });
@@ -701,6 +806,7 @@ $("view-separate").addEventListener("click", () => switchChartMode("separate"));
 
 function switchChartMode(mode) {
   chartMode = mode;
+  localStorage.setItem(CACHE_KEYS.chartMode, mode);
   $("view-combined").classList.toggle("active", mode === "combined");
   $("view-separate").classList.toggle("active", mode === "separate");
   loadChart();

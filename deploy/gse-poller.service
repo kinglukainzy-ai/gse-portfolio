@@ -1,0 +1,9 @@
+[Unit]
+Description=GH Cedi Portfolio - price poller (one-shot)
+
+[Service]
+Type=oneshot
+User=%i
+WorkingDirectory=/opt/gse-portfolio/backend
+EnvironmentFile=/opt/gse-portfolio/.env
+ExecStart=/opt/gse-portfolio/backend/.venv/bin/python price_poller.py

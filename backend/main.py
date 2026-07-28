@@ -64,10 +64,7 @@ def get_config():
 @app.get("/api/stocks")
 async def stock_list():
     """Return all listed GSE symbols with company names, live prices, and logo info."""
-    try:
-        prices = await portfolio.fetch_live_prices()
-    except portfolio.PriceFetchError:
-        prices = {}
+    prices = db.get_current_prices()
 
     # Check which logos exist on disk (> 200 bytes)
     logos_dir = os.path.join(STATIC_DIR, "logos")

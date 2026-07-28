@@ -60,6 +60,14 @@ def init_db():
                 price         REAL NOT NULL,
                 PRIMARY KEY (symbol, snap_date)
             );
+
+            CREATE TABLE IF NOT EXISTS current_prices (
+                symbol        TEXT PRIMARY KEY,
+                price         REAL NOT NULL,
+                change        REAL NOT NULL DEFAULT 0,
+                volume        INTEGER NOT NULL DEFAULT 0,
+                updated_at    TEXT NOT NULL
+            );
             """
         )
         _migrate_snapshots(conn)
@@ -266,3 +274,34 @@ def latest_snapshot_price(symbol: str) -> float | None:
             (symbol.upper(),),
         ).fetchone()
         return row["price"] if row else None
+
+
+# ---------- current prices (poller cache) ----------
+
+def save_current_price(symbol: str, price: float, change: float = 0.0, volume: int = 0):
+    with get_db() as conn:
+        conn.execute(
+            """
+            INSERT INTO current_prices (symbol, price, change, volume, updated_at)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(symbol) DO UPDATE SET
+                price = excluded.price,
+                change = excluded.change,
+                volume = excluded.volume,
+                updated_at = excluded.updated_at
+            """,
+            (symbol.upper(), price, change, volume, now_iso()),
+        )
+
+
+def get_current_prices() -> dict[str, dict]:
+    with get_db() as conn:
+        rows = conn.execute("SELECT symbol, price, change, volume FROM current_prices").fetchall()
+        result = {}
+        for row in rows:
+            result[row["symbol"]] = {
+                "price": row["price"],
+                "change": row["change"],
+                "volume": row["volume"],
+            }
+        return result
