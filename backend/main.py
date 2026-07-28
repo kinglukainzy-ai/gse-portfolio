@@ -82,8 +82,12 @@ async def stock_list():
     stocks = []
     for sym, company_name in sorted(portfolio.GSE_COMPANIES.items()):
         price = None
+        change = 0.0
+        volume = 0
         if sym in prices:
             price = prices[sym]["price"]
+            change = prices[sym].get("change", 0)
+            volume = prices[sym].get("volume", 0)
         else:
             last = db.latest_snapshot_price(sym)
             if last is not None:
@@ -93,6 +97,8 @@ async def stock_list():
             "symbol": sym,
             "name": company_name,
             "price": price,
+            "change": change,
+            "volume": volume,
         }
         if sym in logo_files:
             stock["logo"] = logo_files[sym]

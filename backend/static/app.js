@@ -88,7 +88,6 @@ async function init() {
 
   const me = await api("/api/me", { auth: false, silent404: true });
   if (me) {
-    clearAppCache();
     showDashboard();
     await loadEverything();
   } else {
@@ -318,8 +317,9 @@ async function loadEverything() {
   const hasCache = renderFromCache();
 
   if (hasCache) {
+    overlay.classList.add("hidden");
     try {
-      await Promise.all([loadStocks(true), loadHoldings()]);
+      await Promise.all([loadHoldings()]);
     } catch (e) {
       if (e.status === 401) {
         clearAppCache();
